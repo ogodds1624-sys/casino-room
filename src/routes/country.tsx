@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { PlaneSky } from "@/components/plane-sky";
+import { ArrowLeft } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink, savePlayerCountry } from "@/lib/admin-snapshot";
 import { readPending, savePending } from "@/lib/pending-registration";
@@ -72,17 +72,19 @@ function CountryPage() {
   }
 
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-8">
-      <PlaneSky />
+    <main className="home-theme relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-8 text-white">
       <section className="menu-pop relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-black/55 px-5 py-6 text-white">
           <button
             type="button"
             onClick={backToRegistration}
-            className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25"
+            className="auth-back-home mb-4"
           >
-            ← BACK
+            <span className="auth-back-home-icon" aria-hidden="true">
+              <ArrowLeft size={15} strokeWidth={2.5} />
+            </span>
+            <span>Back</span>
           </button>
-          <h1 className="text-center text-2xl font-black tracking-tight">Where are you playing from?</h1>
+          <h1 className="text-center text-2xl font-black tracking-tight">Choose your country</h1>
           {error ? (
             <p className="mt-3 text-center text-sm font-medium text-red" role="alert">
               {error}

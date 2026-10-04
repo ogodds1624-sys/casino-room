@@ -46,8 +46,11 @@ type Tab = (typeof NAV)[number]["id"];
 
 const PACKAGE_NOTE: Record<number, string> = {
   300: "3 mins per session",
+  350: "3 mins per session",
   400: "5 mins per session",
+  800: "10 mins per session",
   500: "7 mins per session",
+  1700: "20 mins per session",
   35000: "3 mins per session",
   55000: "5 mins per session",
   75000: "7 mins per session",

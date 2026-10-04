@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Flame, Gem, Zap } from "lucide-react";
-import { PlaneSky } from "@/components/plane-sky";
+import { ArrowLeft, ArrowRight, Clock3, Flame, Gem, Zap } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -21,18 +20,18 @@ export const Route = createFileRoute("/packages")({
 
 const PACKAGES = [
   {
-    price: 300,
+    price: 350,
     detail: "3 mins per session",
     icon: Zap,
   },
   {
-    price: 400,
-    detail: "5 mins per session",
+    price: 800,
+    detail: "10 mins per session",
     icon: Flame,
   },
   {
-    price: 500,
-    detail: "7 mins per session",
+    price: 1700,
+    detail: "20 mins per session",
     icon: Gem,
   },
 ];
@@ -91,8 +90,7 @@ function PackagesPage() {
   }
 
   return (
-    <main className="relative min-h-dvh overflow-hidden px-4 py-10 text-white">
-      <PlaneSky />
+    <main className="home-theme relative min-h-dvh overflow-hidden px-4 py-10 text-white">
       <div className="relative z-10 mx-auto w-full max-w-md">
         {alertOn ? (
           <div className="reject-banner mb-5 rounded-2xl border border-red bg-black/75 px-4 py-4 text-center" role="alert">
@@ -102,14 +100,18 @@ function PackagesPage() {
         ) : null}
         <Link
           to="/"
-          className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25 no-underline"
+          className="auth-back-home mb-4"
         >
-          ← BACK HOME
+          <span className="auth-back-home-icon" aria-hidden="true">
+            <ArrowLeft size={15} strokeWidth={2.5} />
+          </span>
+          <span>Back home</span>
         </Link>
-        <h1 className="text-center text-3xl font-extrabold tracking-tight text-gold [text-shadow:0_2px_10px_rgba(0,0,0,0.9)]">
-          Choose Your Package
+        <p className="package-kicker">Casino Room <span aria-hidden="true">/</span> Session Menu</p>
+        <h1 className="package-title">
+          Choose Your <span>Package</span>
         </h1>
-        <p className="mt-2 text-center text-base font-extrabold text-gold [text-shadow:0_2px_10px_rgba(0,0,0,0.9)]">
+        <p className="package-subtitle">
           Buy session time · Use anytime
         </p>
         {store && store.rates.length > 0 ? (
@@ -124,33 +126,69 @@ function PackagesPage() {
             return (
               <article
                 key={pack.price}
-                className="rounded-3xl border border-line bg-panel px-4 py-5"
+                className="package-card"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-3xl font-extrabold tracking-tight text-[#3dde6a]">
-                      GHS {pack.price}
+                <div className="package-card-top">
+                  <div className="package-price-block">
+                    <h2 className="package-price">
+                      <span>GHS</span> {pack.price.toLocaleString("en-GH")}
                     </h2>
-                    <span className="rounded-full border border-red px-2.5 py-1 text-[11px] font-extrabold tracking-wide text-red">
-                      AVAILABLE
-                    </span>
                   </div>
-                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-red/15 text-red">
-                    <Icon className="size-5" aria-hidden />
+                  <span className="package-card-icon">
+                    {pack.price === 350 ? (
+                      <svg className="package-gold-bar" viewBox="0 0 48 40" fill="none" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="gold-bar-top" x1="9" y1="7" x2="39" y2="24" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#FFF0A8" />
+                            <stop offset=".48" stopColor="#F5C84B" />
+                            <stop offset="1" stopColor="#C67A18" />
+                          </linearGradient>
+                          <linearGradient id="gold-bar-front" x1="12" y1="18" x2="35" y2="35" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#F6CC55" />
+                            <stop offset="1" stopColor="#B87512" />
+                          </linearGradient>
+                          <linearGradient id="gold-bar-side" x1="34" y1="19" x2="43" y2="31" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#E9AE34" />
+                            <stop offset="1" stopColor="#8E4B0C" />
+                          </linearGradient>
+                        </defs>
+                        <path d="m10 10 7-5h17l6 5-5 17-8 7H14l-5-7 1-17Z" fill="url(#gold-bar-top)" stroke="#FFE99A" strokeWidth="1.2" strokeLinejoin="round" />
+                        <path d="m10 10 24 0 6 0-5 17-8 7V17L10 10Z" fill="url(#gold-bar-top)" />
+                        <path d="m10 10 17 7v17l-13-1-5-6 1-17Z" fill="url(#gold-bar-front)" stroke="#D79827" strokeWidth=".8" strokeLinejoin="round" />
+                        <path d="m27 17 13-7-5 17-8 7V17Z" fill="url(#gold-bar-side)" stroke="#C48720" strokeWidth=".8" strokeLinejoin="round" />
+                        <path d="m14 12 13 5 10-5" stroke="#FFF1B3" strokeWidth="1" strokeLinecap="round" opacity=".8" />
+                        <path d="m16 25 7 2m-6-5 6 2" stroke="#FFE48A" strokeWidth=".8" strokeLinecap="round" opacity=".72" />
+                        <path d="m29 20 6-3m-6 7 5-2" stroke="#FFD76B" strokeWidth=".8" strokeLinecap="round" opacity=".65" />
+                      </svg>
+                    ) : (
+                      <Icon aria-hidden />
+                    )}
                   </span>
                 </div>
-                <p className="mt-4 text-lg font-semibold text-white">{pack.detail}</p>
+                <div className="package-card-meta">
+                  <p className="package-duration">
+                    <Clock3 aria-hidden />
+                    {pack.detail}
+                  </p>
+                  <span className="package-availability">
+                    <span aria-hidden="true" />
+                    Available
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() =>
                     void navigate({ to: "/pay", search: { amount: pack.price }, viewTransition: false })
                   }
                   style={{ animationDelay: `${index * 0.2}s` }}
-                  className="buy-pulse mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
+                  className="buy-pulse package-buy-button mt-4"
                 >
-                  <span className="inline-flex items-center gap-2">
-                    <ArrowRight className="size-4" aria-hidden />
-                    GET GHS {pack.price}
+                  <span className="package-buy-copy">
+                    <span>Unlock your session</span>
+                    <strong>PAY GHS {pack.price.toLocaleString("en-GH")}</strong>
+                  </span>
+                  <span className="package-buy-arrow" aria-hidden="true">
+                    <ArrowRight />
                   </span>
                 </button>
               </article>

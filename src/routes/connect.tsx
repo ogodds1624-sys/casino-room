@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink, markAccountCompleted, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
 import { sportyNumberMatches } from "@/lib/onboarding-gate";
@@ -32,15 +32,6 @@ function NigeriaFlag() {
       <rect x="8" width="8" height="16" fill="#fff" />
       <rect x="16" width="8" height="16" fill="#008751" />
     </svg>
-  );
-}
-
-function AviatorSky() {
-  return (
-    <div className="aviator-sky" aria-hidden>
-      <div className="aviator-rays" />
-      <div className="aviator-sky-shade" />
-    </div>
   );
 }
 
@@ -125,21 +116,23 @@ function ConnectPage() {
   }
 
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10 text-white">
-      <AviatorSky />
-      <section className="relative z-10 w-full max-w-md min-w-0 rounded-[28px] border border-white/10 bg-black/55 px-5 py-7">
+    <main className="home-theme relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10 text-white">
+      <section className="auth-card relative z-10 w-full max-w-md min-w-0 rounded-[28px] px-5 py-7 text-white">
         <button
           type="button"
           onClick={leaveConnect}
-          className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25"
+          className="auth-back-home mb-4"
         >
-          ← BACK
+          <span className="auth-back-home-icon" aria-hidden="true">
+            <ArrowLeft size={15} strokeWidth={2.5} />
+          </span>
+          <span>Back</span>
         </button>
-        <h1 className="mt-4 text-[28px] leading-tight font-extrabold tracking-tight">
-          Connect your SportyBet account
+        <h1 className="mt-4 text-center text-[28px] leading-tight font-extrabold tracking-tight">
+          Connect your SportyBet
         </h1>
-        <p className="mt-3 text-base leading-relaxed text-muted">
-          Enter your SportyBet account number to link it to Casino.
+        <p className="mt-3 text-center text-base leading-relaxed text-muted">
+          Enter your SportyBet account number to link it to Casino Room.
         </p>
         <div className="my-8 flex justify-center">
           <span className="grid size-20 place-items-center rounded-[22px] bg-red text-5xl font-black text-white">
@@ -147,9 +140,6 @@ function ConnectPage() {
           </span>
         </div>
         <form onSubmit={onSubmit}>
-            <label htmlFor="sportybet" className="text-xs font-extrabold tracking-[0.14em] text-muted">
-              SPORTYBET ACCOUNT NUMBER
-            </label>
             <div className="mt-3 grid min-w-0 grid-cols-[6.25rem_minmax(0,1fr)] gap-2">
               <div className="flex h-14 min-w-0 items-center justify-center gap-1.5 rounded-2xl border border-line bg-ink px-2 text-sm font-semibold">
                 {nigeria ? <NigeriaFlag /> : <GhanaFlag />}
@@ -157,6 +147,7 @@ function ConnectPage() {
               </div>
               <input
                 id="sportybet"
+                aria-label="SportyBet account number"
                 inputMode="numeric"
                 autoComplete="tel"
                 placeholder={nigeria ? "8031234567" : "244123456"}

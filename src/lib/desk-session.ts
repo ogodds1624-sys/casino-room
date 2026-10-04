@@ -2,6 +2,8 @@ export const PREDICTOR_URL = "https://baker-king-acre-ivory.grok.me";
 const KEY = "aviator-session";
 
 export function minutesFor(amount: number) {
+  if (amount === 1700) return 20;
+  if (amount === 800) return 10;
   if (amount === 500 || amount === 75000) return 7;
   if (amount === 400 || amount === 55000) return 5;
   return 3;

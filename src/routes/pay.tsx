@@ -12,7 +12,7 @@ import { openTask } from "@/lib/task-order";
 export const Route = createFileRoute("/pay")({
   validateSearch: (search: Record<string, unknown>) => {
     const amount = Number(search.amount);
-    return { amount: amount === 400 || amount === 500 ? amount : 300 };
+    return { amount: amount === 350 || amount === 400 || amount === 500 || amount === 800 || amount === 1700 ? amount : 350 };
   },
   component: PayPage,
 });
@@ -145,7 +145,7 @@ function PayPage() {
     result === "confirmed" ? "payment confirmed" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
 
   return (
-    <main className="flex min-h-dvh items-start justify-center bg-ink px-3 py-6 text-white sm:items-center">
+    <main className="home-theme flex min-h-dvh items-start justify-center px-3 py-6 text-white sm:items-center">
       {result === "rejected" ? (
         <div className="reject-alert fixed inset-0 z-50 grid place-items-center bg-black/80 px-6" role="alert">
           <div className="reject-card w-full max-w-sm rounded-3xl border border-red bg-[#140606] px-5 py-7 text-center">
@@ -157,7 +157,7 @@ function PayPage() {
       ) : paymentId ? (
         <SignalLoading label={waitingLabel} />
       ) : null}
-      <section className="w-full max-w-md rounded-[28px] border border-line bg-panel px-5 py-5">
+      <section className="auth-card w-full max-w-md rounded-[28px] px-5 py-5">
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs font-extrabold tracking-[0.18em] text-white">
             {selected?.kind === "bank" ? "BANK TRANSFER" : "MOBILE MONEY"}
@@ -174,7 +174,9 @@ function PayPage() {
           {selected?.kind === "bank" ? "Pay by bank transfer" : "Pay by MoMo transfer"}
         </h1>
         <p className="mt-1 text-sm text-white/70">{store?.businessName ?? "Casino"}</p>
-        <p className="mt-3 text-4xl font-extrabold tracking-tight text-[#3dde6a]">GHS {amount}</p>
+        <p className="mt-3 text-4xl font-extrabold tracking-tight text-gold">
+          GHS {amount.toLocaleString("en-GH")}
+        </p>
 
         {!store ? (
           <p className="mt-6 text-sm text-white/70">Loading checkout…</p>
@@ -227,13 +229,15 @@ function PayPage() {
               </div>
               <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-4">
                 <dt className="text-xs font-bold tracking-widest text-white">AMOUNT</dt>
-                <dd className="text-base font-extrabold text-[#3dde6a]">GHS {amount}</dd>
+                <dd className="text-base font-extrabold text-gold">
+                  GHS {amount.toLocaleString("en-GH")}
+                </dd>
               </div>
             </dl>
 
             <ol className="mt-5 space-y-4 text-base leading-relaxed text-white">
               <li>
-                1. Send <strong className="text-[#3dde6a]">GHS {amount}</strong> to the{" "}
+                1. Send <strong className="text-gold">GHS {amount.toLocaleString("en-GH")}</strong> to the{" "}
                 <strong>{selected.label}</strong> details above.
               </li>
               <li>2. Enter the name on the account you sent from.</li>
