@@ -1,2 +1,3 @@
-# casino-site
-A responsive casino dashboard with user management, payment tracking, and referral system
+# Casino Room
+
+A responsive casino dashboard for game outcome predictions, user management, payment tracking, and referrals.
