@@ -269,7 +269,7 @@ function AdminPage() {
   const now = new Date();
   const ghanaToday = dayKeyInZone(now, GHANA_TZ);
   const nigeriaToday = dayKeyInZone(now, NIGERIA_TZ);
-  const confirmed = view.payments.filter((payment) => payment.status === "confirmed");
+  const confirmed = view.payments.filter((payment) => payment.status === "confirmed" && payment.countsRevenue);
   const onDay = (iso: string, key: string, timeZone: string) => Boolean(iso) && dayKeyInZone(iso, timeZone) === key;
   const ghanaPayments = confirmed.filter((payment) => !nairaAmount(payment.amount));
   const nigeriaPayments = confirmed.filter((payment) => nairaAmount(payment.amount));
@@ -1257,7 +1257,7 @@ function WeekRevenue({ payments, country }: { payments: AdminSnapshot["payments"
   const todayKey = dayKeyInZone(now, timeZone);
   const rows = Array.from({ length: 7 }, (_, index) => {
     const key = shiftDayKey(todayKey, index - 6, timeZone);
-    const approved = payments.filter((payment) => payment.status === "confirmed" && payment.confirmedAt && dayKeyInZone(payment.confirmedAt, timeZone) === key);
+    const approved = payments.filter((payment) => payment.status === "confirmed" && payment.countsRevenue && payment.confirmedAt && dayKeyInZone(payment.confirmedAt, timeZone) === key);
     const ghana = approved.filter((payment) => !nairaAmount(payment.amount)).reduce((sum, payment) => sum + payment.amount, 0);
     const nigeria = approved.filter((payment) => nairaAmount(payment.amount)).reduce((sum, payment) => sum + payment.amount, 0);
     return {
