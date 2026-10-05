@@ -918,7 +918,7 @@
 .testimony-marquee-track {
   display: flex;
   width: max-content;
-  animation: ticker 90s linear infinite;
+  animation: ticker 140s linear infinite;
 }
 
 .testimony-marquee:hover .testimony-marquee-track,
@@ -935,18 +935,73 @@
   display: flex;
   flex: 0 0 max-content;
   align-items: center;
-  justify-content: space-around;
-  gap: 2rem;
+  justify-content: flex-start;
+  gap: 1rem;
   min-width: 100%;
   padding-inline: 1rem 3rem;
 }
 
 .home-testimony {
   display: flex;
-  width: max-content;
+  width: 23rem;
+  flex: none;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem 0.6rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.home-testimony-avatar {
+  display: grid;
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #e23b3b, #8f1118);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.home-testimony-body {
+  min-width: 0;
+}
+
+.home-testimony-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
   white-space: nowrap;
+}
+
+.home-testimony-name {
+  color: var(--color-gold);
+  font-weight: 800;
+}
+
+.home-testimony-place {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.home-testimony-stars {
+  color: var(--color-gold);
+  letter-spacing: 0.05em;
+}
+
+.home-testimony-text {
+  margin: 0.15rem 0 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .star-rate {
@@ -1272,20 +1327,23 @@
 @keyframes page-out {
   to {
     opacity: 0;
-    transform: translateY(-14px);
+    transform: translateY(-6px);
   }
 }
 
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(8px);
   }
 }
 
-::view-transition-old(root),
+::view-transition-old(root) {
+  animation: page-out 1000ms ease-in-out both;
+}
+
 ::view-transition-new(root) {
-  animation: none;
+  animation: page-in 1500ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1356,6 +1414,11 @@
   width: 100%;
   max-width: 100%;
   overflow: hidden;
+  padding: 0.9rem 0;
+  border-block: 1px solid rgba(226, 59, 59, 0.28);
+  background: linear-gradient(180deg, rgba(23, 8, 7, 0.82), rgba(8, 4, 4, 0.9));
+  backdrop-filter: blur(10px);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
 
 .below-fold {

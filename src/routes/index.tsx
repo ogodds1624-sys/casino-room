@@ -91,7 +91,7 @@ function Home() {
   return (
     <div className="home-theme min-h-dvh text-white">
       <SiteHeader />
-      <div className="ticker-band border-y border-red/30 bg-[#170807] py-3">
+      <div className="ticker-band">
         {testimoniesError ? (
           <p className="text-center text-sm font-semibold text-white/75">Testimonies are temporarily unavailable.</p>
         ) : testimonies.length ? (
@@ -106,11 +106,16 @@ function Home() {
                   <div className="testimony-marquee-group" key={copy} aria-hidden={copy === 1}>
                     {testimonies.map((item, index) => (
                       <article className="home-testimony" key={`${copy}-${item.name}-${index}`}>
-                        <p className="text-sm leading-relaxed text-white/90">&ldquo;{item.text}&rdquo;</p>
-                        <span className="text-xs font-extrabold text-gold">{item.name}</span>
-                        {item.place ? <span className="text-xs text-white/55">{item.place}</span> : null}
-                        <span className="sr-only">{item.stars} out of 5 stars</span>
-                        <span aria-hidden="true" className="text-xs text-gold">{"★".repeat(item.stars)}</span>
+                        <span className="home-testimony-avatar" aria-hidden="true">{item.name.trim().charAt(0).toUpperCase()}</span>
+                        <div className="home-testimony-body">
+                          <div className="home-testimony-head">
+                            <span className="home-testimony-name">{item.name}</span>
+                            {item.place ? <span className="home-testimony-place">{item.place}</span> : null}
+                            <span className="sr-only">{item.stars} out of 5 stars</span>
+                            <span aria-hidden="true" className="home-testimony-stars">{"★".repeat(item.stars)}</span>
+                          </div>
+                          <p className="home-testimony-text">&ldquo;{item.text}&rdquo;</p>
+                        </div>
                       </article>
                     ))}
                   </div>

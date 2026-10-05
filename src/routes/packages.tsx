@@ -215,7 +215,7 @@ function PackagesPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    void navigate({ to: "/pay", search: { amount: pack.price }, viewTransition: false })
+                    void navigate({ to: "/pay", search: { amount: pack.price } })
                   }
                   style={{ animationDelay: `${index * 0.2}s` }}
                   className="buy-pulse package-buy-button mt-4"

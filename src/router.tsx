@@ -48,7 +48,7 @@ export function getRouter() {
   return createRouter({
     routeTree,
     defaultErrorComponent: AppErrorComponent,
-    defaultViewTransition: false,
+    defaultViewTransition: true,
     ...(typeof window === "undefined" ? {} : { history: calmHistory(createBrowserHistory()) }),
   });
 }
