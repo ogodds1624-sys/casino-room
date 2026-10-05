@@ -26,7 +26,8 @@ function PayPage() {
   const devFallback = user?.isDevFallback === true;
   const [allowed, setAllowed] = useState(false);
   const [choice, setChoice] = useState(0);
-  const [name, setName] = useState("");
+  const [receipt, setReceipt] = useState("");
+  const [receiptName, setReceiptName] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
@@ -126,17 +127,31 @@ function PayPage() {
     });
   }
 
+  function onReceipt(file: File | undefined) {
+    if (!file) {
+      setReceipt("");
+      setReceiptName("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReceipt(typeof reader.result === "string" ? reader.result : "");
+      setReceiptName(file.name);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    const payer = name.trim();
-    if (payer.length < 3) {
-      setError("Enter the name on the account you sent from.");
+    if (!receipt) {
+      setError("Attach a screenshot of your payment.");
       return;
     }
     setError(null);
     try {
       await rememberReferral();
-      const saved = await recordPayment({ data: { name: payer, amount, referredBy: storedReferral() } });
+      const saved = await recordPayment({ data: { name: "", amount, receipt, referredBy: storedReferral() } });
       setPaymentId(saved.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
@@ -242,23 +257,23 @@ function PayPage() {
                 1. Send <strong className="text-gold">GHS {amount.toLocaleString("en-GH")}</strong> to the{" "}
                 <strong>{selected.label}</strong> details above.
               </li>
-              <li>2. Enter the name on the account you sent from.</li>
+              <li>2. Attach a screenshot of your payment.</li>
               <li>3. An admin confirms it under Transactions. This page updates when they do.</li>
             </ol>
 
             {paymentId ? null : (
               <form onSubmit={onSubmit} className="mt-6">
-                <label htmlFor="momo-name" className="text-xs font-extrabold tracking-[0.14em] text-white">
-                  NAME ON THE ACCOUNT YOU SENT FROM
+                <label htmlFor="receipt" className="text-xs font-extrabold tracking-[0.14em] text-white">
+                  PAYMENT SCREENSHOT
                 </label>
                 <input
-                  id="momo-name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. Kwame Mensah"
-                  autoComplete="name"
-                  className="mt-3 h-14 w-full rounded-xl border border-line bg-ink px-4 text-base text-white outline-none placeholder:text-white/40"
+                  id="receipt"
+                  type="file"
+                  accept="image/*,.pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={(event) => onReceipt(event.target.files?.[0])}
+                  className="mt-3 w-full rounded-xl border border-line bg-ink px-3 py-3 text-sm text-white file:mr-3 file:rounded-full file:border-0 file:bg-white/15 file:px-3 file:py-1 file:text-sm file:font-bold file:text-white"
                 />
+                <p className="mt-2 text-sm text-white/60">{receiptName || "no file selected"}</p>
                 {error ? <p className="mt-2 text-sm text-red">{error}</p> : null}
                 <button
                   type="submit"

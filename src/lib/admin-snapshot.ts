@@ -740,7 +740,7 @@ export const recordPayment = createServerFn({ method: "POST" })
     const amount = Number(data?.amount);
     const receipt = typeof data?.receipt === "string" ? data.receipt : "";
     const referredBy = String(data?.referredBy ?? "").trim().slice(0, 80);
-    if (name.length < 3) throw new Error("Enter the name on the MoMo number.");
+    if (!receipt && name.length < 3) throw new Error("Attach a screenshot of your payment.");
     if (![300, 350, 400, 500, 800, 1700, 41986, 95968, 203932, 35000, 55000, 75000].includes(amount)) throw new Error("Unknown package.");
     return { name, amount, receipt, referredBy };
   })

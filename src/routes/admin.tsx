@@ -190,10 +190,11 @@ function AdminPage() {
             const fresh = pending.filter((payment) => !knownPayments.current?.has(payment.id));
             if (fresh.length > 0) {
               const latest = fresh[0];
+              const who = latest.memberName ?? (latest.payerName || "A player");
               const text =
                 fresh.length === 1
-                  ? `${latest.payerName} sent ${moneyLabel(latest.amount)}`
-                  : `${fresh.length} new payments · ${latest.payerName} sent ${moneyLabel(latest.amount)}`;
+                  ? `${who} sent ${moneyLabel(latest.amount)}`
+                  : `${fresh.length} new payments · ${who} sent ${moneyLabel(latest.amount)}`;
               setNotice(text);
               window.localStorage.setItem("aviator-tx-notice", text);
             }

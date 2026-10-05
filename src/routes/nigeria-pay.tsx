@@ -31,7 +31,6 @@ function NigeriaPayPage() {
   const store = useLiveStorefront();
   const [ready, setReady] = useState(false);
   const [choice, setChoice] = useState(0);
-  const [name, setName] = useState("");
   const [amount, setAmount] = useState<number | null>(null);
   const [showPay, setShowPay] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -144,15 +143,14 @@ function NigeriaPayPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!open || amount == null) return;
-    const payer = name.trim();
-    if (payer.length < 3) {
-      setError("Enter the name on the account you sent from.");
+    if (!receipt) {
+      setError("Attach a screenshot of your payment.");
       return;
     }
     setError(null);
     try {
       await rememberReferral();
-      const saved = await recordPayment({ data: { name: payer, amount, receipt, referredBy: storedReferral() } });
+      const saved = await recordPayment({ data: { name: "", amount, receipt, referredBy: storedReferral() } });
       setPaymentId(saved.id);
       setWaiting(true);
     } catch (err) {
@@ -412,18 +410,7 @@ function NigeriaPayPage() {
               />
               <p className="mt-2 text-sm text-white/60">{receiptName || "no file selected"}</p>
               <p className="mt-1 text-xs text-white/50">Any screenshot size is accepted, including files over 1MB.</p>
-              <label htmlFor="sender-name" className="mt-5 block text-xs font-extrabold tracking-[0.14em] text-white">
-                NAME ON THE TRANSFER
-              </label>
-              <input
-                id="sender-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="e.g. Frank Kalaba"
-                autoComplete="name"
-                className="mt-3 h-14 w-full rounded-xl border border-line bg-ink px-4 text-base text-white outline-none placeholder:text-white/40"
-              />
-              {error ? <p className="mt-2 text-sm text-red">{error}</p> : null}
+              {error ?  <p className="mt-2 text-sm text-red">{error}</p> : null}
               <button
                 type="submit"
                 className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white"
