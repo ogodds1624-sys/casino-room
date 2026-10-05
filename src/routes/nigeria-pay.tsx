@@ -5,7 +5,7 @@ import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snap
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { SignalLoading } from "@/components/signal-loading";
-import { startSession } from "@/lib/desk-session";
+import { connectMinutesFor, startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
@@ -81,8 +81,10 @@ function NigeriaPayPage() {
     if (!amount) return;
     if (result === "confirmed") {
       startSession(amount);
-      void navigate({ to: "/session" });
-      return;
+      const timer = window.setTimeout(() => {
+        void navigate({ to: "/session" });
+      }, connectMinutesFor(amount) * 60 * 1000);
+      return () => window.clearTimeout(timer);
     }
     if (result === "rejected") {
       setWaiting(false);
@@ -159,7 +161,7 @@ function NigeriaPayPage() {
   }
 
   const waitingLabel =
-    result === "confirmed" ? "payment confirmed" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
+    result === "confirmed" ? "your network is connecting to the hack server" : result === "rejected" ? "payment rejected" : "waiting for confirmation";
 
   if (!ready) {
     return (

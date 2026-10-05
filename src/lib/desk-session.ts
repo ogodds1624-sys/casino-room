@@ -16,6 +16,11 @@ export function minutesFor(amount: number) {
   return 3;
 }
 
+export function connectMinutesFor(amount: number) {
+  const mins = minutesFor(amount);
+  return mins >= 20 ? 15 : mins >= 10 ? 7 : 2;
+}
+
 export function startSession(amount: number) {
   const mins = minutesFor(amount);
   const endsAt = Date.now() + mins * 60 * 1000;

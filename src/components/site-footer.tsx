@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, type FormEvent } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Send } from "lucide-react";
 import { getSportyLink, submitTestimony } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -13,6 +13,7 @@ const LINKS = [
 ] as const;
 
 export const SiteFooter = memo(function SiteFooter() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [place, setPlace] = useState("");
@@ -54,7 +55,7 @@ export const SiteFooter = memo(function SiteFooter() {
       setPlace("");
       setText("");
       setStars(5);
-      setNote("Testimony successfully sent.");
+      setNote("Your review was sent successfully.");
     } catch (err) {
       setNote(err instanceof Error ? err.message : "Could not send your testimony.");
     } finally {
@@ -69,20 +70,20 @@ export const SiteFooter = memo(function SiteFooter() {
           <button
             id="send-testimony"
             type="button"
-            onClick={() => setOpen((value) => !value)}
+            onClick={() => (signedIn ? setOpen((value) => !value) : void navigate({ to: "/register" }))}
             className="testimony-cta inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-red-300/40 bg-gradient-to-r from-red to-[#b91c24] px-6 text-xs font-extrabold tracking-[0.12em] text-white shadow-[0_8px_26px_rgba(226,59,59,0.3)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(226,59,59,0.42)]"
           >
             <Send className="size-4" aria-hidden />
             SEND YOUR TESTIMONY
           </button>
-          {open ? (
-            <form onSubmit={(event) => void onSubmit(event)} className="mt-3 w-full rounded-2xl border border-white/10 bg-[#111111] px-4 py-4">
+          {open && signedIn ? (
+            <form onSubmit={(event) => void onSubmit(event)} className="mt-3 w-full rounded-2xl border border-white/15 bg-black/25 px-4 py-4 backdrop-blur-md">
               <label className="block text-xs font-bold tracking-[0.14em] text-[#9aa3b2]">
                 NAME
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-ink px-3 text-sm font-semibold tracking-normal text-white outline-none"
+                  className="mt-1 h-11 w-full rounded-xl border border-white/15 bg-black/30 px-3 text-sm font-semibold tracking-normal text-white outline-none"
                 />
               </label>
               <label className="mt-3 block text-xs font-bold tracking-[0.14em] text-[#9aa3b2]">
@@ -91,7 +92,7 @@ export const SiteFooter = memo(function SiteFooter() {
                   value={place}
                   onChange={(event) => setPlace(event.target.value)}
                   placeholder="Accra, Ghana"
-                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-ink px-3 text-sm font-semibold tracking-normal text-white outline-none"
+                  className="mt-1 h-11 w-full rounded-xl border border-white/15 bg-black/30 px-3 text-sm font-semibold tracking-normal text-white outline-none"
                 />
               </label>
               <label className="mt-3 block text-xs font-bold tracking-[0.14em] text-[#9aa3b2]">
@@ -100,7 +101,7 @@ export const SiteFooter = memo(function SiteFooter() {
                   value={text}
                   onChange={(event) => setText(event.target.value)}
                   rows={3}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-ink px-3 py-2 text-sm font-semibold tracking-normal text-white outline-none"
+                  className="mt-1 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm font-semibold tracking-normal text-white outline-none"
                 />
               </label>
               <p className="mt-3 text-xs font-bold tracking-[0.14em] text-[#9aa3b2]">STAR RATING</p>
