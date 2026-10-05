@@ -1909,3 +1909,82 @@ body.site-front .buy-pulse.press-hold {
       inset 0 1px rgba(255, 255, 255, 0.3);
   }
 }
+
+.country-btn {
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  animation:
+    country-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) calc(var(--i, 0) * 0.15s + 0.1s) forwards,
+    country-glow 2.6s ease-in-out calc(var(--i, 0) * 0.4s + 0.8s) infinite;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.country-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.35) 50%, transparent 62%);
+  transform: translateX(-130%);
+  animation: buy-shine 3.2s ease-in-out calc(var(--i, 0) * 0.5s + 1s) infinite;
+  pointer-events: none;
+}
+
+.country-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.country-btn:not(:disabled):hover {
+  transform: translateY(-3px) scale(1.03);
+  filter: brightness(1.12);
+}
+
+.country-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.country-flag {
+  animation: country-flag 2.4s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+@keyframes country-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes country-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(226, 59, 59, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 22px 4px rgba(226, 59, 59, 0.45);
+  }
+}
+
+@keyframes country-flag {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .country-btn,
+  .country-btn::after,
+  .country-flag {
+    animation: none;
+    opacity: 1;
+  }
+}

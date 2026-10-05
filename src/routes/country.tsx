@@ -95,10 +95,10 @@ function CountryPage() {
               type="button"
               onClick={() => void chooseCountry("Ghana")}
               disabled={saving}
-              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
+              className="country-btn flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-3">
-                <svg viewBox="0 0 24 16" className="h-6 w-9 rounded-sm" aria-hidden>
+                <svg viewBox="0 0 24 16" className="country-flag h-6 w-9 rounded-sm" aria-hidden>
                   <rect width="24" height="5.34" fill="#ce1126" />
                   <rect y="5.33" width="24" height="5.34" fill="#fcd116" />
                   <rect y="10.66" width="24" height="5.34" fill="#006b3f" />
@@ -114,11 +114,11 @@ function CountryPage() {
               type="button"
               onClick={() => void chooseCountry("Nigeria")}
               disabled={saving}
-              style={{ animationDelay: "0.2s" }}
-              className="buy-pulse flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
+              style={{ "--i": 1 } as React.CSSProperties}
+              className="country-btn flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-3">
-                <svg viewBox="0 0 24 16" className="h-6 w-9 rounded-sm" aria-hidden>
+                <svg viewBox="0 0 24 16" className="country-flag h-6 w-9 rounded-sm" aria-hidden>
                   <rect width="8" height="16" fill="#008751" />
                   <rect x="8" width="8" height="16" fill="#fff" />
                   <rect x="16" width="8" height="16" fill="#008751" />
