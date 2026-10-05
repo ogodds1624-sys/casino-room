@@ -121,7 +121,15 @@ const LOCAL_DEV_ORIGINS: string[] = [
 // Custom domain in front of the Vercel app. BETTER_AUTH_URL is the *.vercel.app
 // host, so sign-in from the public domain is rejected as "Invalid origin"
 // unless these are listed too.
-const PRODUCTION_HOSTS: string[] = ["aviatorsignalhack.com", "www.aviatorsignalhack.com"];
+const PRODUCTION_HOSTS: string[] = [
+  "aviatorsignalhack.com",
+  "www.aviatorsignalhack.com",
+  "casino-room-project.vercel.app",
+  // Vercel injects these per deployment (production alias, deployment and branch URLs).
+  ...[env("VERCEL_URL"), env("VERCEL_BRANCH_URL"), env("VERCEL_PROJECT_PRODUCTION_URL")].filter(
+    (host): host is string => Boolean(host),
+  ),
+];
 const PRODUCTION_ORIGINS: string[] = PRODUCTION_HOSTS.map((host) => `https://${host}`);
 const baseURL = explicitBaseURL ?? {
   // Include loopback hosts so dynamic baseURL resolves for local email/password
