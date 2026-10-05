@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { CalendarDays, CircleDollarSign, Copy, Diamond, LayoutGrid, Star, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, CircleDollarSign, Copy, Diamond, LayoutGrid, Star, Users } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { applyPartner, getPartnerGate, getPartnerPortal, partnerLogin, type PartnerPortal } from "@/lib/admin-snapshot";
 
@@ -134,11 +134,11 @@ function PartnersPage() {
 
   if (!portal) {
     return (
-      <main className="admin-desk flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
-        <section className="menu-pop w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#111111] text-white">
+      <main className="admin-desk home-theme flex min-h-dvh items-center justify-center px-4 py-10 text-white">
+        <section className="menu-pop relative z-10 w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#111111]/90 text-white backdrop-blur-sm">
           <div className="px-6 pt-8 text-center">
             <Diamond className="mx-auto size-7 fill-red text-red" aria-hidden />
-            <h1 className="mt-4 text-3xl font-black tracking-tight">CASINO</h1>
+            <h1 className="mt-4 text-3xl font-black tracking-tight">CASINO ROOM</h1>
             <p className="mt-2 text-xs font-extrabold tracking-[0.22em] text-red">PARTNER ACCESS</p>
           </div>
           <div className="mt-8 grid grid-cols-2 text-sm font-extrabold tracking-wide">
@@ -255,9 +255,14 @@ function PartnersPage() {
               </p>
             </form>
           )}
-          <Link to="/" className="block pb-6 text-center text-sm font-bold tracking-wide text-[#8b95a7] no-underline">
-            ← BACK TO SITE
-          </Link>
+          <div className="flex justify-center pb-6 pt-2">
+            <Link to="/" className="auth-back-home">
+              <span className="auth-back-home-icon" aria-hidden="true">
+                <ArrowLeft size={15} strokeWidth={2.5} />
+              </span>
+              <span>Back to site</span>
+            </Link>
+          </div>
         </section>
       </main>
     );
@@ -277,8 +282,8 @@ function PartnersPage() {
   }
 
   return (
-    <main className="admin-desk desk-shell bg-ink text-white">
-      <aside className="admin-side border-r border-white/10 bg-ink px-4 py-6">
+    <main className="admin-desk home-theme desk-shell text-white">
+      <aside className="admin-side border-r border-white/10 bg-transparent px-4 py-6">
         <div className="flex items-center gap-2 px-2">
           <Diamond className="size-4 fill-red text-red" aria-hidden />
           <span className="text-lg font-black leading-tight">
@@ -303,7 +308,7 @@ function PartnersPage() {
         </button>
       </aside>
       <section className="min-w-0 flex-1">
-        <header className="admin-mobile-nav flex gap-2 overflow-x-auto border-b border-white/10 bg-ink px-4 py-3">
+        <header className="admin-mobile-nav flex gap-2 overflow-x-auto border-b border-white/10 bg-transparent px-4 py-3">
           <button
             type="button"
             onClick={() => setDesk("overview")}

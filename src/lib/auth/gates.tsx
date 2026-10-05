@@ -101,7 +101,6 @@ export function UserButton() {
   const full = user.displayName ?? user.primaryEmail ?? "Account";
   const parts = full.trim().split(/\s+/).filter(Boolean);
   const first = (parts[0]?.charAt(0) || "A").toUpperCase();
-  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0).toUpperCase() : "";
   return (
     <div className="flex items-center gap-1.5">
       <span
@@ -109,8 +108,6 @@ export function UserButton() {
         aria-label={full}
       >
         <span className="text-sm font-black tracking-tight text-white">{first}</span>
-        {last ? <span className="px-0.5 text-xs font-black text-red">.</span> : null}
-        {last ? <span className="text-sm font-black tracking-tight text-[#f0c14d]">{last}</span> : null}
       </span>
       {authEnabled && !gateSession && (
         <button
