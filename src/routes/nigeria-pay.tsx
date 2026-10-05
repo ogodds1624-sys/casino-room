@@ -1,10 +1,9 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, Flame, Gem, X, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock3, Flame, Gem, X, Zap } from "lucide-react";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
-import { PlaneSky } from "@/components/plane-sky";
 import { SignalLoading } from "@/components/signal-loading";
 import { startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
@@ -15,9 +14,9 @@ export const Route = createFileRoute("/nigeria-pay")({
 });
 
 const PACKAGES = [
-  { price: 35000, detail: "3 mins per session", icon: Zap },
-  { price: 55000, detail: "5 mins per session", icon: Flame },
-  { price: 75000, detail: "7 mins per session", icon: Gem },
+  { price: 41986, detail: "3 mins per session", icon: Zap },
+  { price: 95968, detail: "10 mins per session", icon: Flame },
+  { price: 203932, detail: "20 mins per session", icon: Gem },
 ] as const;
 
 function naira(amount: number) {
@@ -33,7 +32,7 @@ function NigeriaPayPage() {
   const [ready, setReady] = useState(false);
   const [choice, setChoice] = useState(0);
   const [name, setName] = useState("");
-  const [amount, setAmount] = useState<35000 | 55000 | 75000 | null>(null);
+  const [amount, setAmount] = useState<number | null>(null);
   const [showPay, setShowPay] = useState(false);
   const [copied, setCopied] = useState(false);
   const [receiptName, setReceiptName] = useState("");
@@ -172,8 +171,7 @@ function NigeriaPayPage() {
 
   if (amount == null || !showPay) {
     return (
-      <main className="relative min-h-dvh overflow-hidden px-4 py-10 text-white">
-        <PlaneSky />
+      <main className="home-theme relative min-h-dvh overflow-hidden px-4 py-10 text-white">
         <div className="relative z-10 mx-auto w-full max-w-md">
           {alertOn ? (
             <div className="reject-banner mb-5 rounded-2xl border border-red bg-black/75 px-4 py-4 text-center" role="alert">
@@ -181,36 +179,108 @@ function NigeriaPayPage() {
               <p className="mt-1 text-base font-bold text-white">Your payment was rejected. Choose a package and try again.</p>
             </div>
           ) : null}
-          <Link
-            to="/"
-            className="mb-4 inline-flex h-7 items-center justify-center rounded-lg border border-white/5 bg-black/20 px-2 text-[10px] font-bold tracking-wide text-white/25 no-underline"
-          >
-            ← BACK HOME
+          <Link to="/" className="auth-back-home mb-4">
+            <span className="auth-back-home-icon" aria-hidden="true">
+              <ArrowLeft size={15} strokeWidth={2.5} />
+            </span>
+            <span>Back home</span>
           </Link>
-          <h1 className="text-center text-3xl font-extrabold tracking-tight text-gold [text-shadow:0_2px_10px_rgba(0,0,0,0.9)]">
-            Choose Your Package
+          <p className="package-kicker">Casino Room <span aria-hidden="true">/</span> Session Menu</p>
+          <h1 className="package-title">
+            Choose Your <span>Package</span>
           </h1>
-          <p className="mt-2 text-center text-base font-extrabold text-gold [text-shadow:0_2px_10px_rgba(0,0,0,0.9)]">
-            Buy session time · Use anytime
-          </p>
+          <p className="package-subtitle">Buy session time · Use anytime</p>
           {error ? <p className="mt-4 text-center text-sm font-bold text-red">{error}</p> : null}
           <div className="mt-6 space-y-4">
             {PACKAGES.map((pack, index) => {
               const Icon = pack.icon;
               return (
-                <article key={pack.price} className="rounded-3xl border border-line bg-panel px-4 py-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-3xl font-extrabold tracking-tight text-[#3dde6a]">{naira(pack.price)}</h2>
-                      <span className="rounded-full border border-red px-2.5 py-1 text-[11px] font-extrabold tracking-wide text-red">
-                        AVAILABLE
-                      </span>
+                <article key={pack.price} className="package-card">
+                  <div className="package-card-top">
+                    <div className="package-price-block">
+                      <h2 className="package-price">
+                        <span>₦</span> {pack.price.toLocaleString("en-NG")}
+                      </h2>
                     </div>
-                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-red/15 text-red">
-                      <Icon className="size-5" aria-hidden />
+                      <span className={"package-card-icon" + (pack.price === 41986 ? " package-card-icon-gold" : pack.price === 95968 ? " package-card-icon-gold package-card-icon-platinum" : pack.price === 203932 ? " package-card-icon-gold package-card-icon-diamond" : "")}>
+                        {pack.price === 41986 ? (
+                          <svg className="package-gold-bar" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                            <defs>
+                              <linearGradient id="coin-face" x1="8" y1="6" x2="40" y2="30" gradientUnits="userSpaceOnUse">
+                                <stop stopColor="#FFF3B0" />
+                                <stop offset=".5" stopColor="#F6C94E" />
+                                <stop offset="1" stopColor="#C9801A" />
+                              </linearGradient>
+                              <linearGradient id="coin-edge" x1="0" y1="0" x2="0" y2="1">
+                                <stop stopColor="#D9961F" />
+                                <stop offset="1" stopColor="#8A4A0B" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M8 34v-4c0-2.6 7.2-4.5 16-4.5s16 1.9 16 4.5v4c0 2.6-7.2 4.5-16 4.5S8 36.600 8 34Z" fill="url(#coin-edge)" />
+                            <ellipse cx="24" cy="30" rx="16" ry="4.500" fill="url(#coin-face)" stroke="#FFE99A" strokeWidth=".8" />
+                            <path d="M8 26v-4c0-2.6 7.2-4.5 16-4.5s16 1.9 16 4.5v4c0 2.6-7.2 4.5-16 4.5S8 28.600 8 26Z" fill="url(#coin-edge)" />
+                            <ellipse cx="24" cy="22" rx="16" ry="4.500" fill="url(#coin-face)" stroke="#FFE99A" strokeWidth=".8" />
+                            <path d="M8 18v-4c0-2.6 7.2-4.5 16-4.5s16 1.9 16 4.5v4c0 2.6-7.2 4.5-16 4.5S8 20.600 8 18Z" fill="url(#coin-edge)" />
+                            <ellipse cx="24" cy="14" rx="16" ry="4.500" fill="url(#coin-face)" stroke="#FFE99A" strokeWidth=".8" />
+                            <ellipse cx="24" cy="14" rx="9" ry="2.200" stroke="#B8710F" strokeWidth=".9" opacity=".7" />
+                            <path d="M14 12.500c3-1.500 9-1.800 13-.600" stroke="#fff" strokeWidth="1" strokeLinecap="round" opacity=".75" />
+                            <path d="M38 7l1.200 2.800L42 11l-2.800 1.200L38 15l-1.200-2.800L34 11l2.800-1.200L38 7Z" fill="#FFF3B0" />
+                          </svg>
+                        ) : pack.price === 95968 ? (
+                          <svg className="package-gold-bar" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                            <defs>
+                              <linearGradient id="plat-face" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+                                <stop stopColor="#FFFFFF" />
+                                <stop offset=".5" stopColor="#C9D6E8" />
+                                <stop offset="1" stopColor="#7F8FA8" />
+                              </linearGradient>
+                              <linearGradient id="plat-rim" x1="0" y1="0" x2="1" y2="1">
+                                <stop stopColor="#EAF2FF" />
+                                <stop offset="1" stopColor="#5E6E88" />
+                              </linearGradient>
+                            </defs>
+                            <circle cx="24" cy="25" r="18" fill="#4B5A73" />
+                            <circle cx="24" cy="23" r="18" fill="url(#plat-rim)" />
+                            <circle cx="24" cy="23" r="14.500" fill="url(#plat-face)" stroke="#FFFFFF" strokeWidth=".8" />
+                            <circle cx="24" cy="23" r="11.500" stroke="#7F8FA8" strokeWidth=".8" opacity=".7" />
+                            <path d="m24 13.500 2.900 6 6.600.9-4.800 4.600 1.200 6.500L24 28.300l-5.900 3.200 1.200-6.500-4.800-4.600 6.600-.9 2.900-6Z" fill="#E8F1FF" stroke="#8A9AB4" strokeWidth=".9" strokeLinejoin="round" />
+                            <path d="M13 17c2-4 6-6.500 10-6.800" stroke="#fff" strokeWidth="1.400" strokeLinecap="round" opacity=".85" />
+                            <path d="M40 6l1 2.400L43.400 9.400 41 10.400 40 12.800l-1-2.400-2.400-1L39 8.400 40 6Z" fill="#fff" />
+                          </svg>
+                        ) : pack.price === 203932 ? (
+                          <svg className="package-gold-bar" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                            <defs>
+                              <linearGradient id="dia-top" x1="8" y1="8" x2="40" y2="20" gradientUnits="userSpaceOnUse">
+                                <stop stopColor="#E9FBFF" />
+                                <stop offset="1" stopColor="#7FD8F5" />
+                              </linearGradient>
+                              <linearGradient id="dia-body" x1="24" y1="18" x2="24" y2="44" gradientUnits="userSpaceOnUse">
+                                <stop stopColor="#4CC3F0" />
+                                <stop offset="1" stopColor="#1E6FC9" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M14 8h20l8 10-18 24L6 18l8-10Z" fill="url(#dia-body)" stroke="#D9F6FF" strokeWidth="1" strokeLinejoin="round" />
+                            <path d="M14 8h20l8 10H6l8-10Z" fill="url(#dia-top)" stroke="#D9F6FF" strokeWidth="1" strokeLinejoin="round" />
+                            <path d="m18 18 6-10 6 10-6 24-6-24Z" fill="#fff" opacity=".28" />
+                            <path d="M6 18h36M18 18l6 24 6-24M14 8l4 10M34 8l-4 10" stroke="#EFFCFF" strokeWidth=".8" strokeLinejoin="round" opacity=".75" />
+                            <path d="M40 4l1 2.400L43.400 7.400 41 8.400 40 10.800l-1-2.400-2.400-1L39 6.400 40 4Z" fill="#fff" />
+                          </svg>
+                        ) : (
+                          <Icon aria-hidden />
+                        )}
+                      </span>
+
+                  </div>
+                  <div className="package-card-meta">
+                    <p className="package-duration">
+                      <Clock3 aria-hidden />
+                      {pack.detail}
+                    </p>
+                    <span className="package-availability">
+                      <span aria-hidden="true" />
+                      Available
                     </span>
                   </div>
-                  <p className="mt-4 text-lg font-semibold text-white">{pack.detail}</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -218,11 +288,13 @@ function NigeriaPayPage() {
                       setShowPay(true);
                     }}
                     style={{ animationDelay: `${index * 0.2}s` }}
-                    className="buy-pulse mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
+                    className="buy-pulse package-buy-button mt-4"
                   >
-                    <span className="inline-flex items-center gap-2">
-                      <ArrowRight className="size-4" aria-hidden />
-                      GET {naira(pack.price)}
+                    <span className="package-buy-copy">
+                      <strong>Unlock sessions</strong>
+                    </span>
+                    <span className="package-buy-arrow" aria-hidden="true">
+                      <ArrowRight />
                     </span>
                   </button>
                 </article>
@@ -235,7 +307,7 @@ function NigeriaPayPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-start justify-center bg-ink px-3 py-6 text-white sm:items-center">
+    <main className="home-theme flex min-h-dvh items-start justify-center px-3 py-6 text-white sm:items-center">
       {result === "rejected" ? (
         <div className="reject-alert fixed inset-0 z-50 grid place-items-center bg-black/80 px-6" role="alert">
           <div className="reject-card w-full max-w-sm rounded-3xl border border-red bg-[#140606] px-5 py-7 text-center">
@@ -247,9 +319,9 @@ function NigeriaPayPage() {
       ) : paymentId ? (
         <SignalLoading label={waitingLabel} />
       ) : null}
-      <section className="w-full max-w-md rounded-[28px] border border-line bg-panel px-5 py-5">
+      <section className="auth-card w-full max-w-md rounded-[28px] px-5 py-5">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-xs font-extrabold tracking-[0.18em] text-red">BANK TRANSFER</p>
+          <p className="text-xs font-extrabold tracking-[0.18em] text-white">BANK TRANSFER</p>
           <button
             type="button"
             aria-label="Close"

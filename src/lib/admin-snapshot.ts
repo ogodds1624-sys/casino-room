@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Sql } from "@/lib/db";
+import { isNairaAmount } from "@/lib/desk-session";
 
 export type AdminMember = {
   id: string;
@@ -178,7 +179,7 @@ export function shiftDayKey(key: string, days: number, timeZone: string) {
 export function isNairaPayment(amount: number, country: string | null | undefined) {
   if (country === "Nigeria") return true;
   if (country === "Ghana") return false;
-  return amount === 35000 || amount === 55000 || amount === 75000;
+  return isNairaAmount(amount);
 }
 
 export function commissionCut(amount: number, percent: number) {
@@ -481,11 +482,11 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
     select lower(partner.code) as referred_by,
       coalesce(sum(case when
         c.country = 'Nigeria'
-        or (c.country is distinct from 'Ghana' and p.amount in (35000, 55000, 75000))
+        or (c.country is distinct from 'Ghana' and p.amount in (41986, 95968, 203932, 35000, 55000, 75000))
         then 0 else p.amount end), 0) as ghs,
       coalesce(sum(case when
         c.country = 'Nigeria'
-        or (c.country is distinct from 'Ghana' and p.amount in (35000, 55000, 75000))
+        or (c.country is distinct from 'Ghana' and p.amount in (41986, 95968, 203932, 35000, 55000, 75000))
         then p.amount else 0 end), 0) as ngn
     from payments p
     left join referrals r on r.user_id = p.user_id
@@ -726,7 +727,7 @@ export const recordPayment = createServerFn({ method: "POST" })
     const receipt = typeof data?.receipt === "string" ? data.receipt : "";
     const referredBy = String(data?.referredBy ?? "").trim().slice(0, 80);
     if (name.length < 3) throw new Error("Enter the name on the MoMo number.");
-    if (![300, 350, 400, 500, 800, 1700, 35000, 55000, 75000].includes(amount)) throw new Error("Unknown package.");
+    if (![300, 350, 400, 500, 800, 1700, 41986, 95968, 203932, 35000, 55000, 75000].includes(amount)) throw new Error("Unknown package.");
     return { name, amount, receipt, referredBy };
   })
   .handler(async ({ data }) => {
