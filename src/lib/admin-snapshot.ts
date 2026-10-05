@@ -37,7 +37,37 @@ export type AdminPartner = {
   nigeriaRevenue: number;
 };
 
-export type MomoWallet = { network: string; number: string; name: string };
+export const GHANA_MOMO_NETWORKS = [
+  { value: "MTN Mobile Money", label: "MTN" },
+  { value: "Telecel Cash", label: "Telecel" },
+  { value: "AirtelTigo Money", label: "AirtelTigo" },
+] as const;
+export type MomoNetwork = (typeof GHANA_MOMO_NETWORKS)[number]["value"] | "";
+export type MomoWallet = { network: MomoNetwork; number: string; name: string };
+export const GHANA_BANKS = [
+  "Absa Bank Ghana",
+  "Access Bank Ghana",
+  "Agricultural Development Bank",
+  "Bank of Africa Ghana",
+  "CalBank",
+  "Consolidated Bank Ghana",
+  "Ecobank Ghana",
+  "Fidelity Bank Ghana",
+  "First Atlantic Bank",
+  "First National Bank Ghana",
+  "GCB Bank",
+  "Guaranty Trust Bank Ghana",
+  "National Investment Bank",
+  "OmniBSIC Bank",
+  "Prudential Bank",
+  "Republic Bank Ghana",
+  "Societe Generale Ghana",
+  "Stanbic Bank Ghana",
+  "Standard Chartered Bank Ghana",
+  "United Bank for Africa Ghana",
+  "Universal Merchant Bank",
+  "Zenith Bank Ghana",
+] as const;
 export type BankAccount = { bank: string; number: string; name: string };
 
 export type GatewayCheckout = {
@@ -1404,9 +1434,19 @@ const DEFAULT_CHECKOUT: GatewayCheckout = {
   bank: false,
   nigeriaOn: false,
   nigeriaBanks: [{ bank: "", number: "", name: "" }],
-  wallets: [{ network: "Telecel Cash (Vodafone)", number: "", name: "" }],
+  wallets: [{ network: "", number: "", name: "" }],
   banks: [{ bank: "", number: "", name: "" }],
 };
+
+function readMomoNetwork(value: unknown, hasDetails: boolean): MomoNetwork {
+  const network = String(value ?? "").trim();
+  if (network === "Telecel Cash (Vodafone)" || network === "Telecel") {
+    return hasDetails ? "Telecel Cash" : "";
+  }
+  if (network === "MTN") return "MTN Mobile Money";
+  if (network === "AirtelTigo") return "AirtelTigo Money";
+  return GHANA_MOMO_NETWORKS.find((option) => option.value === network)?.value ?? "";
+}
 
 function cleanList<T>(value: unknown, map: (item: Record<string, unknown>) => T): T[] {
   if (!Array.isArray(value)) return [];
@@ -1421,7 +1461,7 @@ function readCheckout(value: string | null | undefined): GatewayCheckout {
   try {
     const parsed = JSON.parse(value) as Partial<GatewayCheckout>;
     const wallets = cleanList(parsed.wallets, (item) => ({
-      network: String(item.network ?? "Telecel Cash (Vodafone)"),
+      network: readMomoNetwork(item.network, Boolean(item.number || item.name)),
       number: String(item.number ?? ""),
       name: String(item.name ?? ""),
     }));
@@ -1460,6 +1500,20 @@ export const saveGatewayCheckout = createServerFn({ method: "POST" })
     const whatsapp = String(data?.whatsapp ?? "").replace(/[^\d]/g, "");
     const email = String(data?.email ?? "").trim();
     if (email && !email.includes("@")) throw new Error("Enter a valid support email.");
+    const wallets = cleanList(data?.wallets, (item) => ({
+      network: readMomoNetwork(item.network, Boolean(item.number || item.name)),
+      number: String(item.number ?? "").replace(/[^\d]/g, "").slice(0, 15),
+      name: String(item.name ?? "").trim().slice(0, 80),
+    })).filter((item) => item.number || item.name);
+    if (wallets.some((wallet) => !wallet.network)) throw new Error("Choose a network for each Ghana MoMo wallet.");
+    const banks = cleanList(data?.banks, (item) => ({
+      bank: String(item.bank ?? "").trim().slice(0, 40),
+      number: String(item.number ?? "").replace(/[^\d]/g, "").slice(0, 20),
+      name: String(item.name ?? "").trim().slice(0, 80),
+    })).filter((item) => item.bank || item.number || item.name);
+    if (banks.some((account) => (account.number || account.name) && !account.bank)) {
+      throw new Error("Choose a bank for each Ghana bank account.");
+    }
     return {
       currency: "GHS",
       businessName: String(data?.businessName ?? "").trim().slice(0, 80) || "Casino",
@@ -1472,16 +1526,8 @@ export const saveGatewayCheckout = createServerFn({ method: "POST" })
       momo: Boolean(data?.momo),
       bank: Boolean(data?.bank),
       nigeriaOn: Boolean(data?.nigeriaOn),
-      wallets: cleanList(data?.wallets, (item) => ({
-        network: String(item.network ?? "Telecel Cash (Vodafone)").slice(0, 40),
-        number: String(item.number ?? "").replace(/[^\d]/g, "").slice(0, 15),
-        name: String(item.name ?? "").trim().slice(0, 80),
-      })).filter((item) => item.number || item.name),
-      banks: cleanList(data?.banks, (item) => ({
-        bank: String(item.bank ?? "").trim().slice(0, 40),
-        number: String(item.number ?? "").replace(/[^\d]/g, "").slice(0, 20),
-        name: String(item.name ?? "").trim().slice(0, 80),
-      })).filter((item) => item.bank || item.number || item.name),
+      wallets,
+      banks,
       nigeriaBanks: cleanList(data?.nigeriaBanks, (item) => ({
         bank: String(item.bank ?? "").trim().slice(0, 40),
         number: String(item.number ?? "").replace(/[^\d]/g, "").slice(0, 20),

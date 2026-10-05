@@ -7,8 +7,10 @@ import {
   deletePartner,
   deleteTestimony,
   dayKeyInZone,
+  GHANA_BANKS,
   getAdminSnapshot,
   getPaymentProof,
+  GHANA_MOMO_NETWORKS,
   GHANA_TZ,
   liveDayLabel,
   NIGERIA_TZ,
@@ -285,8 +287,8 @@ function AdminPage() {
 
   if (!unlocked) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-ink px-4 py-10 text-white">
-        <form autoComplete="off" onSubmit={unlock} className="menu-pop w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
+      <main className="home-theme relative flex min-h-dvh items-center justify-center px-4 py-10 text-white">
+        <form autoComplete="off" onSubmit={unlock} className="menu-pop relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
           <div className="mx-auto grid size-16 place-items-center rounded-full border border-red/40 bg-red/15">
             <Lock className="size-7 text-gold" aria-hidden />
           </div>
@@ -336,8 +338,8 @@ function AdminPage() {
   }
 
   return (
-    <main className="admin-desk desk-shell bg-ink text-white">
-      <aside className="admin-side border-r border-white/10 bg-ink px-4 py-6 text-white">
+    <main className="home-theme admin-desk desk-shell text-white">
+      <aside className="admin-side border-r border-white/10 bg-transparent px-4 py-6 text-white">
         <div className="flex items-start justify-between gap-2 px-2">
           <div className="flex items-start gap-2">
             <Diamond className="mt-1 size-4 shrink-0 fill-red text-red" aria-hidden />
@@ -634,6 +636,14 @@ function CheckoutSettings({
         onSubmit={(event) => {
           event.preventDefault();
           if (!hasCheckoutSettings(form)) return;
+          if (form.wallets.some((wallet) => (wallet.number.trim() || wallet.name.trim()) && !wallet.network)) {
+            setError("Choose a network for each Ghana MoMo wallet.");
+            return;
+          }
+          if (form.banks.some((account) => (account.number.trim() || account.name.trim()) && !account.bank)) {
+            setError("Choose a bank for each Ghana bank account.");
+            return;
+          }
           setError(null);
           onBusy(true);
           void saveGatewayCheckout({ data: form })
@@ -664,17 +674,31 @@ function CheckoutSettings({
         <Toggle label="Ghana MoMo" on={form.momo} onClick={() => update((current) => ({ ...current, momo: !current.momo }))} />
         {form.wallets.map((wallet, index) => (
           <div key={`wallet-${index}`} className="grid gap-2 md:grid-cols-3">
-            <input value={wallet.network} onChange={(event) => patchList<MomoWallet>("wallets", index, { network: event.target.value })} placeholder="Network" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+            <select
+              value={wallet.network}
+              onChange={(event) => {
+                const network = GHANA_MOMO_NETWORKS.find((option) => option.value === event.target.value)?.value ?? "";
+                patchList<MomoWallet>("wallets", index, { network });
+              }}
+              className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none"
+            >
+              <option value="">Select network</option>
+              {GHANA_MOMO_NETWORKS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <input value={wallet.number} onChange={(event) => patchList<MomoWallet>("wallets", index, { number: event.target.value })} placeholder="Number" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
             <input value={wallet.name} onChange={(event) => patchList<MomoWallet>("wallets", index, { name: event.target.value })} placeholder="Name" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
           </div>
         ))}
-        <button type="button" onClick={() => update((current) => ({ ...current, wallets: [...current.wallets, { network: "Telecel Cash (Vodafone)", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
+        <button type="button" onClick={() => update((current) => ({ ...current, wallets: [...current.wallets, { network: "", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
           ADD MOMO
         </button>
         <Toggle label="Ghana bank" on={form.bank} onClick={() => update((current) => ({ ...current, bank: !current.bank }))} />
         {form.banks.map((account, index) => (
-          <BankFields key={`bank-${index}`} account={account} onChange={(patch) => patchList<BankAccount>("banks", index, patch)} />
+          <GhanaBankFields key={`bank-${index}`} account={account} onChange={(patch) => patchList<BankAccount>("banks", index, patch)} />
         ))}
         <button type="button" onClick={() => update((current) => ({ ...current, banks: [...current.banks, { bank: "", number: "", name: "" }] }))} className="h-10 w-fit rounded-lg border border-white/15 px-3 text-xs font-extrabold">
           ADD BANK
@@ -725,6 +749,30 @@ function BankFields({ account, onChange }: { account: BankAccount; onChange: (pa
   return (
     <div className="grid gap-2 md:grid-cols-3">
       <input value={account.bank} onChange={(event) => onChange({ bank: event.target.value })} placeholder="Bank" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+      <input value={account.number} onChange={(event) => onChange({ number: event.target.value })} placeholder="Account number" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+      <input value={account.name} onChange={(event) => onChange({ name: event.target.value })} placeholder="Account name" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
+    </div>
+  );
+}
+
+function GhanaBankFields({ account, onChange }: { account: BankAccount; onChange: (patch: Partial<BankAccount>) => void }) {
+  return (
+    <div className="grid gap-2 md:grid-cols-3">
+      <select
+        value={account.bank}
+        onChange={(event) => onChange({ bank: event.target.value })}
+        className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none"
+      >
+        <option value="">Select bank</option>
+        {account.bank && !GHANA_BANKS.some((bank) => bank === account.bank) ? (
+          <option value={account.bank}>{account.bank} (saved)</option>
+        ) : null}
+        {GHANA_BANKS.map((bank) => (
+          <option key={bank} value={bank}>
+            {bank}
+          </option>
+        ))}
+      </select>
       <input value={account.number} onChange={(event) => onChange({ number: event.target.value })} placeholder="Account number" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
       <input value={account.name} onChange={(event) => onChange({ name: event.target.value })} placeholder="Account name" className="h-11 rounded-lg border border-white/15 bg-ink px-3 text-sm outline-none" />
     </div>

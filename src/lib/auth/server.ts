@@ -113,6 +113,10 @@ const LOCAL_DEV_ORIGINS: string[] = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
   "http://[::1]:8080",
+  // Fallback port when 8080 is already taken by another local app.
+  "http://localhost:8081",
+  "http://127.0.0.1:8081",
+  "http://[::1]:8081",
 ];
 // Custom domain in front of the Vercel app. BETTER_AUTH_URL is the *.vercel.app
 // host, so sign-in from the public domain is rejected as "Invalid origin"

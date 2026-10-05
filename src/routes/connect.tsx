@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { SignalLoading } from "@/components/signal-loading";
 import { getSportyLink, markAccountCompleted, savePlayerCountry, saveSportyLink } from "@/lib/admin-snapshot";
+import { leaveUnlinked } from "@/lib/leave-unlinked";
 import { sportyNumberMatches } from "@/lib/onboarding-gate";
 import { clearPending, readPending } from "@/lib/pending-registration";
 import { rememberReferral } from "@/lib/remember-ref";
@@ -63,8 +64,7 @@ function ConnectPage() {
   }, [navigate]);
 
   function leaveConnect() {
-    clearPending();
-    void navigate({ to: "/" });
+    void leaveUnlinked();
   }
 
   async function onSubmit(event: FormEvent) {
