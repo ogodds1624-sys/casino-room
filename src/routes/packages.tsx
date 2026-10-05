@@ -134,31 +134,68 @@ function PackagesPage() {
                       <span>GHS</span> {pack.price.toLocaleString("en-GH")}
                     </h2>
                   </div>
-                  <span className="package-card-icon">
+                  <span className={"package-card-icon" + (pack.price === 350 ? " package-card-icon-gold" : pack.price === 800 ? " package-card-icon-gold package-card-icon-platinum" : pack.price === 1700 ? " package-card-icon-gold package-card-icon-diamond" : "")}>
                     {pack.price === 350 ? (
-                      <svg className="package-gold-bar" viewBox="0 0 48 40" fill="none" aria-hidden="true">
+                      <svg className="package-gold-bar" viewBox="0 0 48 48" fill="none" aria-hidden="true">
                         <defs>
-                          <linearGradient id="gold-bar-top" x1="9" y1="7" x2="39" y2="24" gradientUnits="userSpaceOnUse">
-                            <stop stopColor="#FFF0A8" />
-                            <stop offset=".48" stopColor="#F5C84B" />
-                            <stop offset="1" stopColor="#C67A18" />
+                          <linearGradient id="coin-face" x1="8" y1="6" x2="40" y2="30" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#FFF3B0" />
+                            <stop offset=".5" stopColor="#F6C94E" />
+                            <stop offset="1" stopColor="#C9801A" />
                           </linearGradient>
-                          <linearGradient id="gold-bar-front" x1="12" y1="18" x2="35" y2="35" gradientUnits="userSpaceOnUse">
-                            <stop stopColor="#F6CC55" />
-                            <stop offset="1" stopColor="#B87512" />
-                          </linearGradient>
-                          <linearGradient id="gold-bar-side" x1="34" y1="19" x2="43" y2="31" gradientUnits="userSpaceOnUse">
-                            <stop stopColor="#E9AE34" />
-                            <stop offset="1" stopColor="#8E4B0C" />
+                          <linearGradient id="coin-edge" x1="0" y1="0" x2="0" y2="1">
+                            <stop stopColor="#D9961F" />
+                            <stop offset="1" stopColor="#8A4A0B" />
                           </linearGradient>
                         </defs>
-                        <path d="m10 10 7-5h17l6 5-5 17-8 7H14l-5-7 1-17Z" fill="url(#gold-bar-top)" stroke="#FFE99A" strokeWidth="1.2" strokeLinejoin="round" />
-                        <path d="m10 10 24 0 6 0-5 17-8 7V17L10 10Z" fill="url(#gold-bar-top)" />
-                        <path d="m10 10 17 7v17l-13-1-5-6 1-17Z" fill="url(#gold-bar-front)" stroke="#D79827" strokeWidth=".8" strokeLinejoin="round" />
-                        <path d="m27 17 13-7-5 17-8 7V17Z" fill="url(#gold-bar-side)" stroke="#C48720" strokeWidth=".8" strokeLinejoin="round" />
-                        <path d="m14 12 13 5 10-5" stroke="#FFF1B3" strokeWidth="1" strokeLinecap="round" opacity=".8" />
-                        <path d="m16 25 7 2m-6-5 6 2" stroke="#FFE48A" strokeWidth=".8" strokeLinecap="round" opacity=".72" />
-                        <path d="m29 20 6-3m-6 7 5-2" stroke="#FFD76B" strokeWidth=".8" strokeLinecap="round" opacity=".65" />
+                        <path d="M8 34v-4c0-2.6 7.2-4.5 16-4.5s16 1.9 16 4.5v4c0 2.6-7.2 4.5-16 4.5S8 36.600 8 34Z" fill="url(#coin-edge)" />
+                        <ellipse cx="24" cy="30" rx="16" ry="4.500" fill="url(#coin-face)" stroke="#FFE99A" strokeWidth=".8" />
+                        <path d="M8 26v-4c0-2.6 7.2-4.5 16-4.5s16 1.9 16 4.5v4c0 2.6-7.2 4.5-16 4.5S8 28.600 8 26Z" fill="url(#coin-edge)" />
+                        <ellipse cx="24" cy="22" rx="16" ry="4.500" fill="url(#coin-face)" stroke="#FFE99A" strokeWidth=".8" />
+                        <path d="M8 18v-4c0-2.6 7.2-4.5 16-4.5s16 1.9 16 4.5v4c0 2.6-7.2 4.5-16 4.5S8 20.600 8 18Z" fill="url(#coin-edge)" />
+                        <ellipse cx="24" cy="14" rx="16" ry="4.500" fill="url(#coin-face)" stroke="#FFE99A" strokeWidth=".8" />
+                        <ellipse cx="24" cy="14" rx="9" ry="2.200" stroke="#B8710F" strokeWidth=".9" opacity=".7" />
+                        <path d="M14 12.500c3-1.500 9-1.800 13-.600" stroke="#fff" strokeWidth="1" strokeLinecap="round" opacity=".75" />
+                        <path d="M38 7l1.200 2.800L42 11l-2.800 1.200L38 15l-1.200-2.800L34 11l2.800-1.200L38 7Z" fill="#FFF3B0" />
+                      </svg>
+                    ) : pack.price === 800 ? (
+                      <svg className="package-gold-bar" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="plat-face" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#FFFFFF" />
+                            <stop offset=".5" stopColor="#C9D6E8" />
+                            <stop offset="1" stopColor="#7F8FA8" />
+                          </linearGradient>
+                          <linearGradient id="plat-rim" x1="0" y1="0" x2="1" y2="1">
+                            <stop stopColor="#EAF2FF" />
+                            <stop offset="1" stopColor="#5E6E88" />
+                          </linearGradient>
+                        </defs>
+                        <circle cx="24" cy="25" r="18" fill="#4B5A73" />
+                        <circle cx="24" cy="23" r="18" fill="url(#plat-rim)" />
+                        <circle cx="24" cy="23" r="14.500" fill="url(#plat-face)" stroke="#FFFFFF" strokeWidth=".8" />
+                        <circle cx="24" cy="23" r="11.500" stroke="#7F8FA8" strokeWidth=".8" opacity=".7" />
+                        <path d="m24 13.500 2.900 6 6.600.9-4.800 4.600 1.200 6.500L24 28.300l-5.900 3.200 1.200-6.500-4.800-4.600 6.600-.9 2.900-6Z" fill="#E8F1FF" stroke="#8A9AB4" strokeWidth=".9" strokeLinejoin="round" />
+                        <path d="M13 17c2-4 6-6.500 10-6.800" stroke="#fff" strokeWidth="1.400" strokeLinecap="round" opacity=".85" />
+                        <path d="M40 6l1 2.400L43.400 9.400 41 10.400 40 12.800l-1-2.400-2.400-1L39 8.400 40 6Z" fill="#fff" />
+                      </svg>
+                    ) : pack.price === 1700 ? (
+                      <svg className="package-gold-bar" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="dia-top" x1="8" y1="8" x2="40" y2="20" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#E9FBFF" />
+                            <stop offset="1" stopColor="#7FD8F5" />
+                          </linearGradient>
+                          <linearGradient id="dia-body" x1="24" y1="18" x2="24" y2="44" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#4CC3F0" />
+                            <stop offset="1" stopColor="#1E6FC9" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M14 8h20l8 10-18 24L6 18l8-10Z" fill="url(#dia-body)" stroke="#D9F6FF" strokeWidth="1" strokeLinejoin="round" />
+                        <path d="M14 8h20l8 10H6l8-10Z" fill="url(#dia-top)" stroke="#D9F6FF" strokeWidth="1" strokeLinejoin="round" />
+                        <path d="m18 18 6-10 6 10-6 24-6-24Z" fill="#fff" opacity=".28" />
+                        <path d="M6 18h36M18 18l6 24 6-24M14 8l4 10M34 8l-4 10" stroke="#EFFCFF" strokeWidth=".8" strokeLinejoin="round" opacity=".75" />
+                        <path d="M40 4l1 2.400L43.400 7.400 41 8.400 40 10.800l-1-2.400-2.400-1L39 6.400 40 4Z" fill="#fff" />
                       </svg>
                     ) : (
                       <Icon aria-hidden />
@@ -184,8 +221,7 @@ function PackagesPage() {
                   className="buy-pulse package-buy-button mt-4"
                 >
                   <span className="package-buy-copy">
-                    <span>Unlock your session</span>
-                    <strong>PAY GHS {pack.price.toLocaleString("en-GH")}</strong>
+                    <strong>Unlock sessions</strong>
                   </span>
                   <span className="package-buy-arrow" aria-hidden="true">
                     <ArrowRight />
