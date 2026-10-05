@@ -55,7 +55,7 @@ export const SiteFooter = memo(function SiteFooter() {
       setPlace("");
       setText("");
       setStars(5);
-      setNote("Your review was sent successfully.");
+      setNote("Thank you, review sent successfully.");
     } catch (err) {
       setNote(err instanceof Error ? err.message : "Could not send your testimony.");
     } finally {
