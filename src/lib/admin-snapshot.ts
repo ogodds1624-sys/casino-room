@@ -214,8 +214,6 @@ async function partnerCodeFor(sql: Sql, referredBy: string) {
   return rows[0]?.code || value;
 }
 
-const AUTO_APPROVED_SEED = "andrewfrimpong2724@gmail.com";
-
 async function ensurePayments(sql: Sql) {
   schemaPromise ??= (async () => {
     await sql`
@@ -235,8 +233,7 @@ async function ensurePayments(sql: Sql) {
     await sql`alter table payments add column if not exists confirmed_at timestamptz`;
     await sql`update payments set counts_revenue = true where counts_revenue is null`;
     await sql`update payments set confirmed_at = created_at where status = 'confirmed' and confirmed_at is null`;
-    await sql`create table if not exists auto_approved_emails (email text primary key, created_at timestamptz not null default now())`;
-    await sql`insert into auto_approved_emails (email) values (${AUTO_APPROVED_SEED}) on conflict (email) do nothing`;
+    await sql`drop table if exists auto_approved_emails`;
     await sql`
       create table if not exists referrals (
         user_id text primary key,
@@ -519,7 +516,7 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       end
       limit 1
     ) partner on true
-    where p.status = 'confirmed'
+    where p.status = 'confirmed' and p.counts_revenue is not false
     group by lower(partner.code)
   `;
   const countBy = new Map(referralCounts.map((row) => [row.referred_by, Number(row.total)]));
@@ -769,18 +766,6 @@ export const recordPayment = createServerFn({ method: "POST" })
       `;
     }
     const id = crypto.randomUUID();
-    // Pre-approved account: the payment is still saved and visible to admins, but is not counted as revenue.
-    const approvedRows = sessionUser?.email
-      ? await sql<{ email: string }>`select email from auto_approved_emails where email = ${sessionUser.email.trim().toLowerCase()}`
-      : [];
-    const autoApproved = approvedRows.length > 0;
-    if (autoApproved) {
-      await sql`
-        insert into payments (id, payer_name, amount, status, user_id, referred_by, receipt, counts_revenue, confirmed_at)
-        values (${id}, ${data.name}, ${data.amount}, 'confirmed', ${sessionUser?.id ?? null}, ${referredBy}, ${data.receipt}, false, now())
-      `;
-      return { ok: true, id };
-    }
     await sql`
       insert into payments (id, payer_name, amount, status, user_id, referred_by, receipt)
       values (${id}, ${data.name}, ${data.amount}, 'pending', ${sessionUser?.id ?? null}, ${referredBy}, ${data.receipt})
@@ -1334,7 +1319,7 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
         end
         limit 1
       ) partner on true
-      where p.status = 'confirmed'
+      where p.status = 'confirmed' and p.counts_revenue is not false
         and lower(partner.code) = ${code}
     `;
     const cut = (amount: number) => commissionCut(amount, commission);
