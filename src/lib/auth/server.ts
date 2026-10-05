@@ -34,6 +34,7 @@ import { bearer, genericOAuth } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { createHash, randomBytes } from "node:crypto";
+import { networkInterfaces } from "node:os";
 import { ensureDbReady, getPglite } from "../db";
 import { getSharedPgPool } from "../pg-pool";
 import { emailAndPasswordEnabled } from "./email-password";
@@ -118,6 +119,41 @@ const LOCAL_DEV_ORIGINS: string[] = [
   "http://127.0.0.1:8081",
   "http://[::1]:8081",
 ];
+function isPrivateIPv4(address: string): boolean {
+  const octets = address.split(".").map(Number);
+  if (
+    octets.length !== 4 ||
+    octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)
+  ) {
+    return false;
+  }
+  const [first, second] = octets;
+  return (
+    first === 10 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168)
+  );
+}
+const localLanAddresses =
+  process.env.NODE_ENV === "development"
+    ? [
+        ...new Set(
+          Object.values(networkInterfaces())
+            .flatMap((interfaces) => interfaces ?? [])
+            .filter(
+              (address) =>
+                address.family === "IPv4" &&
+                !address.internal &&
+                isPrivateIPv4(address.address),
+            )
+            .map((address) => address.address),
+        ),
+      ]
+    : [];
+const localLanHosts = localLanAddresses.flatMap((address) =>
+  [8080, 8081].map((port) => `${address}:${port}`),
+);
+const localLanOrigins = localLanHosts.map((host) => `http://${host}`);
 // Custom domain in front of the Vercel app. BETTER_AUTH_URL is the *.vercel.app
 // host, so sign-in from the public domain is rejected as "Invalid origin"
 // unless these are listed too.
@@ -134,7 +170,14 @@ const PRODUCTION_ORIGINS: string[] = PRODUCTION_HOSTS.map((host) => `https://${h
 const baseURL = explicitBaseURL ?? {
   // Include loopback hosts so dynamic baseURL resolves for local email/password
   // (not only the preview wildcard).
-  allowedHosts: [...previewAllowedHosts, ...PRODUCTION_HOSTS, "localhost", "127.0.0.1", "[::1]"],
+  allowedHosts: [
+    ...previewAllowedHosts,
+    ...PRODUCTION_HOSTS,
+    "localhost",
+    "127.0.0.1",
+    "[::1]",
+    ...localLanHosts,
+  ],
   // `auto` → trust both http:// and https:// expansions of allowedHosts
   // (preview is https; local dev is http).
   protocol: "auto" as const,
@@ -153,6 +196,7 @@ const trustedOrigins: string[] = explicitBaseURL
       ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
       ...PRODUCTION_ORIGINS,
       ...LOCAL_DEV_ORIGINS,
+      ...localLanOrigins,
     ];
 
 const databaseUrl = env("DATABASE_URL");
