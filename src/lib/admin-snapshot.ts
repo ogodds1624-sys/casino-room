@@ -308,6 +308,16 @@ async function ensurePayments(sql: Sql) {
       ["seed-ng-ngozi", "Ngozi Eze", "Enugu, Nigeria", "The rounds are easier to follow now. I come back to the desk every evening.", 5],
       ["seed-gh-yaw", "Yaw Owusu", "Tamale, Ghana", "Simple to use on my phone. The live round felt easier to read.", 5],
       ["seed-ng-ibrahim", "Ibrahim Musa", "Kano, Nigeria", "I open the desk, watch the window, and play only when it looks right.", 5],
+      ["seed-gh-esi", "Esi Appiah", "Cape Coast, Ghana", "Bought the 10 minute session and it ran exactly as listed. Happy with it.", 5],
+      ["seed-gh-nana", "Nana Yeboah", "Sunyani, Ghana", "The window showed up in time and I cashed out safely. Will buy again.", 4],
+      ["seed-gh-abena", "Abena Frimpong", "Koforidua, Ghana", "Easy to pay with MoMo and my session opened soon after approval.", 5],
+      ["seed-gh-kojo", "Kojo Badu", "Ho, Ghana", "I like that the timer is clear. I always know how long I have left.", 4],
+      ["seed-gh-efua", "Efua Quaye", "Tema, Ghana", "Support replied fast and the desk worked well on my phone.", 5],
+      ["seed-gh-yaa", "Yaa Danquah", "Wa, Ghana", "Simple layout and the signals are easy to read. Good value.", 5],
+      ["seed-gh-kwesi", "Kwesi Ofori", "Accra, Ghana", "Third time buying. The session started right after my payment cleared.", 5],
+      ["seed-gh-adwoa", "Adwoa Sarpong", "Kumasi, Ghana", "Clean and quick. The 20 minute session gave me plenty of time.", 4],
+      ["seed-ng-emeka", "Emeka Nwosu", "Port Harcourt, Nigeria", "Bank transfer was easy and my session was opened once confirmed.", 5],
+      ["seed-ng-fatima", "Fatima Yusuf", "Kaduna, Nigeria", "The signals are clear and the timer is easy to follow on my phone.", 4],
     ] as const;
     for (let index = 0; index < providedTestimonies.length; index += 1) {
       const [id, name, place, body, stars] = providedTestimonies[index];
