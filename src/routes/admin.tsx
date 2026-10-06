@@ -38,7 +38,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-const ADMIN_PASS = "8057";
+const ADMIN_PASS = "5951";
 const ADMIN_KEY = "aviator-admin-open";
 const NAV = [
   { id: "overview", label: "OVERVIEW", icon: LayoutGrid },
