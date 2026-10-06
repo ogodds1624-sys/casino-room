@@ -60,9 +60,9 @@ export function readPendingPayment() {
   try {
     const raw = window.localStorage.getItem(PENDING_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw) as { id?: unknown; amount?: unknown };
+    const data = JSON.parse(raw) as { id?: unknown; amount?: unknown; readyAt?: unknown };
     if (typeof data.id !== "string" || !Number.isFinite(data.amount)) return null;
-    return { id: data.id, amount: data.amount as number };
+    return { id: data.id, amount: data.amount as number, readyAt: typeof data.readyAt === "number" ? data.readyAt : null };
   } catch {
     return null;
   }
@@ -70,4 +70,16 @@ export function readPendingPayment() {
 
 export function clearPendingPayment() {
   window.localStorage.removeItem(PENDING_KEY);
+}
+
+// Starts the session and the connecting delay once; later calls just return the time left, so refreshes never restart it.
+export function confirmPendingPayment(id: string, amount: number) {
+  const saved = readPendingPayment();
+  let readyAt = saved && saved.id === id ? saved.readyAt : null;
+  if (readyAt == null) {
+    startSession(amount);
+    readyAt = Date.now() + connectMinutesFor(amount) * 60 * 1000;
+    window.localStorage.setItem(PENDING_KEY, JSON.stringify({ id, amount, readyAt }));
+  }
+  return Math.max(0, readyAt - Date.now());
 }

@@ -5,7 +5,7 @@ import { SignalLoading } from "@/components/signal-loading";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
-import { clearPendingPayment, connectMinutesFor, readPendingPayment, savePendingPayment, sessionLeft, startSession } from "@/lib/desk-session";
+import { clearPendingPayment, confirmPendingPayment, readPendingPayment, savePendingPayment } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
@@ -78,9 +78,6 @@ function PayPage() {
           clearPendingPayment();
           setResult("rejected");
           setPaymentId(saved.id);
-        } else if (row.status === "confirmed" && sessionLeft() > 0) {
-          clearPendingPayment();
-          void navigate({ to: "/session" });
         } else {
           setPaymentId(saved.id);
           if (row.status === "confirmed") setResult("confirmed");
@@ -106,11 +103,10 @@ function PayPage() {
 
   useEffect(() => {
     if (result === "confirmed") {
-      startSession(amount);
       const timer = window.setTimeout(() => {
         clearPendingPayment();
         void navigate({ to: "/session" });
-      }, connectMinutesFor(amount) * 60 * 1000);
+      }, confirmPendingPayment(paymentId ?? "", amount));
       return () => window.clearTimeout(timer);
     }
     if (result === "rejected") {

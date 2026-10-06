@@ -7,6 +7,7 @@ import { enforceCompletedAccount } from "@/lib/completed-account";
 import { useBlocked, useBlockWatcher } from "@/lib/blocked-users";
 import { PRESS_HOLD_MS } from "@/lib/press-motion";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { PendingPaymentWatcher } from "@/components/pending-payment-watcher";
 import { SupportChat } from "@/components/support-chat";
 import appCss from "../styles.css?url";
 
@@ -208,6 +209,7 @@ export const Route = createRootRoute({
             <CaptureReferral />
             <CompletedSession />
             <BlockWatcher />
+            <PendingPaymentWatcher />
             <TapBounce />
             <Outlet />
             <SupportChat />

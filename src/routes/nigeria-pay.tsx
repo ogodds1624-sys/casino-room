@@ -5,7 +5,7 @@ import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snap
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { SignalLoading } from "@/components/signal-loading";
-import { clearPendingPayment, connectMinutesFor, readPendingPayment, savePendingPayment, sessionLeft, startSession } from "@/lib/desk-session";
+import { clearPendingPayment, confirmPendingPayment, readPendingPayment, savePendingPayment } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
@@ -77,9 +77,6 @@ function NigeriaPayPage() {
         if (row.status === "rejected") {
           clearPendingPayment();
           setAlertOn(true);
-        } else if (row.status === "confirmed" && sessionLeft() > 0) {
-          clearPendingPayment();
-          void navigate({ to: "/session" });
         } else {
           setAmount(saved.amount);
           setShowPay(true);
@@ -109,11 +106,10 @@ function NigeriaPayPage() {
   useEffect(() => {
     if (!amount) return;
     if (result === "confirmed") {
-      startSession(amount);
       const timer = window.setTimeout(() => {
         clearPendingPayment();
         void navigate({ to: "/session" });
-      }, connectMinutesFor(amount) * 60 * 1000);
+      }, confirmPendingPayment(paymentId ?? "", amount));
       return () => window.clearTimeout(timer);
     }
     if (result === "rejected") {
