@@ -172,8 +172,11 @@ function PayPage() {
     reader.readAsDataURL(file);
   }
 
+  const [sending, setSending] = useState(false);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (sending) return;
     if (!receipt) {
       setError("Attach a screenshot of your payment.");
       return;
@@ -308,7 +311,7 @@ function PayPage() {
                 {error ? <p className="mt-2 text-sm text-red">{error}</p> : null}
                 <button
                   type="submit"
-                  disabled={!allowed}
+                  disabled={!allowed || sending}
                   className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white disabled:opacity-70"
                 >
                   I'VE SENT THE MONEY

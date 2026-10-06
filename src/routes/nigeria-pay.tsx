@@ -168,14 +168,18 @@ function NigeriaPayPage() {
     reader.readAsDataURL(file);
   }
 
+  const [sending, setSending] = useState(false);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (sending) return;
     if (!open || amount == null) return;
     if (!receipt) {
       setError("Attach a screenshot of your payment.");
       return;
     }
     setError(null);
+    setSending(true);
     try {
       await rememberReferral();
       const saved = await recordPayment({ data: { name: "", amount, receipt, referredBy: storedReferral() } });
@@ -184,6 +188,7 @@ function NigeriaPayPage() {
       setWaiting(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
+      setSending(false);
     }
   }
 
@@ -345,7 +350,7 @@ function NigeriaPayPage() {
             <p className="mt-2 text-sm text-white/70">Sending you back to the packages page.</p>
           </div>
         </div>
-      ) : paymentId ? (
+      ) : paymentId || sending ? (
         <SignalLoading label={waitingLabel} />
       ) : null}
       <section className="auth-card w-full max-w-md rounded-[28px] px-5 py-5">
@@ -442,6 +447,7 @@ function NigeriaPayPage() {
               {error ?  <p className="mt-2 text-sm text-red">{error}</p> : null}
               <button
                 type="submit"
+                disabled={sending}
                 className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-red text-base font-extrabold tracking-wide text-white"
               >
                 I'VE SENT THE MONEY
