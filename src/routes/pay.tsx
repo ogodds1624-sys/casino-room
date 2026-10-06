@@ -8,6 +8,7 @@ import { useLiveStorefront } from "@/lib/storefront-live";
 import { clearPendingPayment, confirmPendingPayment, readPendingPayment, savePendingPayment } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
+import { usePaymentSubmission } from "@/lib/use-payment-submission";
 
 export const Route = createFileRoute("/pay")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -172,15 +173,16 @@ function PayPage() {
     reader.readAsDataURL(file);
   }
 
-  const [sending, setSending] = useState(false);
+  const { sending, begin, reset } = usePaymentSubmission();
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (sending) return;
+    if (sending || paymentId) return;
     if (!receipt) {
       setError("Attach a screenshot of your payment.");
       return;
     }
+    if (!begin()) return;
     setError(null);
     try {
       await rememberReferral();
@@ -189,6 +191,7 @@ function PayPage() {
       savePendingPayment(saved.id, amount);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
+      reset();
     }
   }
 
@@ -205,7 +208,7 @@ function PayPage() {
             <p className="mt-2 text-sm text-white/70">Sending you back to the packages page.</p>
           </div>
         </div>
-      ) : paymentId ? (
+      ) : paymentId || sending ? (
         <SignalLoading label={waitingLabel} />
       ) : null}
       <section className="auth-card w-full max-w-md rounded-[28px] px-5 py-5">

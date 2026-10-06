@@ -780,7 +780,7 @@ export const recordPayment = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { getSql } = await import("@/lib/db");
     const { getSessionUser } = await import("@/lib/auth/verify.server");
-    const sql = await getSql();
+    const sql = await getSql({ refreshMigrations: true });
     const sessionUser = await getSessionUser();
     await ensurePayments(sql);
     let referredBy = "";
@@ -801,12 +801,11 @@ export const recordPayment = createServerFn({ method: "POST" })
         on conflict (user_id) do nothing
       `;
     }
-    const id = crypto.randomUUID();
-    await sql`
-      insert into payments (id, payer_name, amount, status, user_id, referred_by, receipt)
-      values (${id}, ${data.name}, ${data.amount}, 'pending', ${sessionUser?.id ?? null}, ${referredBy}, ${data.receipt})
-    `;
-    return { ok: true, id };
+    const { insertPaymentOnce } = await import("@/lib/payment-submission.server");
+    return insertPaymentOnce(sql, {
+      name: data.name, amount: data.amount, receipt: data.receipt,
+      userId: sessionUser?.id ?? null, referredBy,
+    });
   });
 
 export const getPaymentProof = createServerFn({ method: "POST" })

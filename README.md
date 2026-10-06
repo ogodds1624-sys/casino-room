@@ -2,6 +2,16 @@
 
 A responsive casino dashboard for game outcome predictions, user management, payment tracking, and referrals.
 
+## Payment submission
+
+The "I've sent the money" button locks synchronously on the first valid tap and
+shows the waiting screen immediately in both Ghana and Nigeria checkouts.
+Submission errors unlock the button for retry. The server also deduplicates
+the same account, package amount and receipt, returning the original payment ID
+instead of recording another pending/confirmed payment. A rejected submission can
+be submitted again. Migration `0009_payment_submission_dedup.sql` adds the atomic
+database uniqueness guard without modifying older payment records.
+
 ## Partner earnings
 
 Partner earnings are confirmed referral revenue minus the partner's commission:

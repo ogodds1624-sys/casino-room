@@ -8,6 +8,7 @@ import { SignalLoading } from "@/components/signal-loading";
 import { clearPendingPayment, confirmPendingPayment, readPendingPayment, savePendingPayment } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
+import { usePaymentSubmission } from "@/lib/use-payment-submission";
 
 export const Route = createFileRoute("/nigeria-pay")({
   component: NigeriaPayPage,
@@ -41,6 +42,7 @@ function NigeriaPayPage() {
   const [waiting, setWaiting] = useState(false);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [result, setResult] = useState<"pending" | "confirmed" | "rejected">("pending");
+  const { sending, begin, reset: resetSubmission } = usePaymentSubmission();
 
   useEffect(() => {
     if (isPending) return;
@@ -117,11 +119,12 @@ function NigeriaPayPage() {
       setWaiting(false);
       setPaymentId(null);
       setResult("pending");
+      resetSubmission();
       setShowPay(false);
       setAmount(null);
       setAlertOn(true);
     }
-  }, [result, amount, navigate]);
+  }, [result, amount, navigate, resetSubmission]);
 
   const accounts = store?.nigeriaAccounts ?? [];
   const selected = accounts[choice] ?? accounts[0];
@@ -168,18 +171,16 @@ function NigeriaPayPage() {
     reader.readAsDataURL(file);
   }
 
-  const [sending, setSending] = useState(false);
-
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (sending) return;
+    if (sending || paymentId) return;
     if (!open || amount == null) return;
     if (!receipt) {
       setError("Attach a screenshot of your payment.");
       return;
     }
     setError(null);
-    setSending(true);
+    if (!begin()) return;
     try {
       await rememberReferral();
       const saved = await recordPayment({ data: { name: "", amount, receipt, referredBy: storedReferral() } });
@@ -188,7 +189,7 @@ function NigeriaPayPage() {
       setWaiting(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
-      setSending(false);
+      resetSubmission();
     }
   }
 
