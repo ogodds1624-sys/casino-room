@@ -18,6 +18,7 @@ import {
   NIGERIA_TZ,
   shiftDayKey,
   rejectPayment,
+  reversePayment,
   saveGatewayCheckout,
   saveGatewayRates,
   setPartnerCommission,
@@ -269,6 +270,16 @@ function AdminPage() {
     }
   }
 
+  async function reverse(id: string) {
+    if (!window.confirm("Reverse this approved payment? It will be marked rejected and removed from revenue.")) return;
+    setSpinning(true);
+    try {
+      setSnapshot(await reversePayment({ data: { id } }));
+    } finally {
+      setSpinning(false);
+    }
+  }
+
   const view = snapshot ?? EMPTY_SNAPSHOT;
   const nairaAmount = isNairaAmount;
   const now = new Date();
@@ -464,7 +475,7 @@ function AdminPage() {
               <TestimonyDesk rows={view.testimonies} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
             </>
           ) : tab === "transactions" ? (
-            <TransactionHistory payments={view.payments} busy={spinning} onConfirm={(id) => void confirm(id)} onReject={(id) => void reject(id)} />
+            <TransactionHistory payments={view.payments} busy={spinning} onConfirm={(id) => void confirm(id)} onReject={(id) => void reject(id)} onReverse={(id) => void reverse(id)} />
           ) : tab === "members" ? (
             <div className="mt-8">
               <MemberList members={view.members} />
@@ -1015,12 +1026,14 @@ function TransactionHistory({
   payments,
   busy,
   onConfirm,
+  onReverse,
   onReject,
 }: {
   payments: AdminSnapshot["payments"];
   busy: boolean;
   onConfirm: (id: string) => void;
   onReject: (id: string) => void;
+  onReverse: (id: string) => void;
 }) {
   const [proof, setProof] = useState<string | null>(null);
   const [opening, setOpening] = useState("");
@@ -1104,6 +1117,10 @@ function TransactionHistory({
                       × REJECT
                     </button>
                   </>
+                ) : payment.status === "confirmed" ? (
+                  <button type="button" disabled={busy} onClick={() => onReverse(payment.id)} className="rounded-full border border-[#f3b4b4] px-2 py-1 text-[10px] font-extrabold text-[#e23b3b] disabled:opacity-60">
+                    × REVERSE
+                  </button>
                 ) : null}
               </div>
             </article>

@@ -907,6 +907,19 @@ export const rejectPayment = createServerFn({ method: "POST" })
     return readSnapshot(sql);
   });
 
+export const reversePayment = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string }) => {
+    if (!data?.id || typeof data.id !== "string") throw new Error("Missing payment.");
+    return { id: data.id };
+  })
+  .handler(async ({ data }) => {
+    const { getSql } = await import("@/lib/db");
+    const sql = await getSql();
+    await ensurePayments(sql);
+    await sql`update payments set status = 'rejected', counts_revenue = false, confirmed_at = null where id = ${data.id} and status = 'confirmed'`;
+    return readSnapshot(sql);
+  });
+
 export const saveReferral = createServerFn({ method: "POST" })
   .inputValidator((data: { referredBy?: string }) => ({ referredBy: (data?.referredBy?.trim() ?? "").slice(0, 80) }))
   .handler(async ({ data }) => {
