@@ -16,10 +16,6 @@ export const SiteHeader = memo(function SiteHeader() {
 
   useEffect(() => {
     setMounted(true);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   }, []);
 
   useEffect(() => {
