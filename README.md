@@ -32,6 +32,9 @@ payment reference, mark a request paid, or reject it with a required reason.
 Both payout areas refresh every three seconds. Migration
 `0007_partner_payouts.sql` stores the requests durably on the configured database.
 Local embedded preview data remains in memory, as before.
+The payout service refreshes pending migrations once when it initializes, so a
+new payout migration is applied to an already-running local preview without
+restarting it or losing its in-memory accounts.
 
 ### Admin configuration
 

@@ -182,8 +182,10 @@ async function createSql(): Promise<Sql> {
  *
  * Schema comes from `migrations/*.sql`, auto-applied before the first query on
  * both backends — define tables there, never inline in server functions.
+ * refreshMigrations rechecks local migrations while retaining the database instance.
  */
-export function getSql(): Promise<Sql> {
+export function getSql(options: { refreshMigrations?: boolean } = {}): Promise<Sql> {
+  if (options.refreshMigrations) sqlPromise = null;
   sqlPromise ??= createSql().catch((err) => {
     sqlPromise = null; // don't memoize failures — let the next call retry
     throw err;

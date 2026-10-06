@@ -13,6 +13,8 @@ test("payout server functions derive yesterday's earnings and enforce partner/ad
   const pg = new PGlite({ parsers: { 1082: (value) => value } });
   const originalPasscode = process.env.ADMIN_PASSCODE;
   const originalSql = globalThis.__payoutTestSql;
+  const originalRefreshes = globalThis.__payoutTestRefreshes;
+  globalThis.__payoutTestRefreshes = 0;
   try {
     for (const name of (await readdir(join(root, "migrations"))).filter((name) => name.endsWith(".sql")).sort()) {
       await pg.exec(await readFile(join(root, "migrations", name), "utf8"));
@@ -40,10 +42,10 @@ test("payout server functions derive yesterday's earnings and enforce partner/ad
         name: "test-server-boundaries",
         setup(builder) {
           builder.onResolve({ filter: /^@tanstack\/react-start$/ }, () => ({ path: "serverfn", namespace: "test" }));
-          builder.onResolve({ filter: /^(?:@\/lib\/db|\.\/db)$/ }, () => ({ path: "db", namespace: "test" }));
+          builder.onResolve({ filter: /^(?:@\/lib\/db|\.\/db(?:\.ts)?)$/ }, () => ({ path: "db", namespace: "test" }));
           builder.onLoad({ filter: /.*/, namespace: "test" }, ({ path }) => ({
             contents: path === "db"
-              ? "export async function getSql() { return globalThis.__payoutTestSql; }"
+              ? "export async function getSql(options = {}) { if (options.refreshMigrations) globalThis.__payoutTestRefreshes++; return globalThis.__payoutTestSql; }"
               : "export function createServerFn() { let validate = (data) => data; return { inputValidator(fn) { validate = fn; return this; }, handler(fn) { return async (opts = {}) => fn({ data: validate(opts.data) }); } }; }",
             loader: "js",
           }));
@@ -104,11 +106,14 @@ test("payout server functions derive yesterday's earnings and enforce partner/ad
     await pg.exec("update partners set status = 'locked' where id = 'payout-fixture'");
     await assert.rejects(api.getPartnerPayouts({ data: partnerData }), /Sign in again/);
     await assert.rejects(api.requestPartnerPayout({ data: { ...partnerData, currency: "NGN", earningDay: ng.earningDay } }), /Sign in again/);
+    assert.equal(globalThis.__payoutTestRefreshes, 1, "payout initialization refreshes migrations once, not on every poll");
   } finally {
     if (originalPasscode === undefined) delete process.env.ADMIN_PASSCODE;
     else process.env.ADMIN_PASSCODE = originalPasscode;
     if (originalSql === undefined) delete globalThis.__payoutTestSql;
     else globalThis.__payoutTestSql = originalSql;
+    if (originalRefreshes === undefined) delete globalThis.__payoutTestRefreshes;
+    else globalThis.__payoutTestRefreshes = originalRefreshes;
     await pg.close();
   }
 });

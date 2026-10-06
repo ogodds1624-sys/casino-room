@@ -35,10 +35,9 @@ export const checkAdminSession = createServerFn({ method: "POST" })
 export const getPartnerPayouts = createServerFn({ method: "POST" })
   .inputValidator(partnerInput)
   .handler(async ({ data }) => {
-    const { getSql } = await import("./db");
     const { readPartnerPortal } = await import("./admin-snapshot");
-    const { readPartnerPayouts } = await import("./partner-payouts.server");
-    const sql = await getSql();
+    const { getPayoutSql, readPartnerPayouts } = await import("./partner-payouts.server");
+    const sql = await getPayoutSql();
     const portal = await readPartnerPortal(sql, data.token);
     return { balances: portal.payoutBalances, requests: await readPartnerPayouts(sql, data.token) };
   });
@@ -51,10 +50,9 @@ export const requestPartnerPayout = createServerFn({ method: "POST" })
     return { token, currency: data.currency, earningDay: data.earningDay };
   })
   .handler(async ({ data }) => {
-    const { getSql } = await import("./db");
     const { readPartnerPortal } = await import("./admin-snapshot");
-    const { createPayoutRequest, readPartnerPayouts } = await import("./partner-payouts.server");
-    const sql = await getSql();
+    const { getPayoutSql, createPayoutRequest, readPartnerPayouts } = await import("./partner-payouts.server");
+    const sql = await getPayoutSql();
     const portal = await readPartnerPortal(sql, data.token);
     const balance = portal.payoutBalances.find((item) => item.currency === data.currency && item.earningDay === data.earningDay);
     if (!balance) throw new Error("You can only request yesterday's earnings. Refresh and try again.");
@@ -67,9 +65,8 @@ export const getAdminPayouts = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { requireAdminSession } = await import("./admin-access.server");
     requireAdminSession(data.adminToken);
-    const { getSql } = await import("./db");
-    const { readAdminPayouts } = await import("./partner-payouts.server");
-    return readAdminPayouts(await getSql());
+    const { getPayoutSql, readAdminPayouts } = await import("./partner-payouts.server");
+    return readAdminPayouts(await getPayoutSql());
   });
 
 export const reviewPartnerPayout = createServerFn({ method: "POST" })
@@ -85,9 +82,8 @@ export const reviewPartnerPayout = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { requireAdminSession } = await import("./admin-access.server");
     requireAdminSession(data.adminToken);
-    const { getSql } = await import("./db");
-    const { readAdminPayouts, reviewPayoutRequest } = await import("./partner-payouts.server");
-    const sql = await getSql();
+    const { getPayoutSql, readAdminPayouts, reviewPayoutRequest } = await import("./partner-payouts.server");
+    const sql = await getPayoutSql();
     await reviewPayoutRequest(sql, data.id, data.status, data.note);
     return readAdminPayouts(sql);
   });

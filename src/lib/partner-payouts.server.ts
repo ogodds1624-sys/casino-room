@@ -2,6 +2,18 @@ import type { Sql } from "./db";
 import type { PayoutBalance, PayoutRequest } from "./payout-types";
 import { netPartnerEarnings } from "./partner-earnings.ts";
 
+let payoutSqlPromise: Promise<Sql> | null = null;
+
+export function getPayoutSql(): Promise<Sql> {
+  payoutSqlPromise ??= import("./db.ts").then(({ getSql }) =>
+    getSql({ refreshMigrations: true }),
+  ).catch((error) => {
+    payoutSqlPromise = null;
+    throw error;
+  });
+  return payoutSqlPromise;
+}
+
 type PayoutRow = {
   id: string;
   partner_name: string;
