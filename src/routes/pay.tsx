@@ -65,7 +65,11 @@ function PayPage() {
   useEffect(() => {
     if (!allowed || paymentId) return;
     const saved = readPendingPayment();
-    if (!saved || saved.amount !== amount) return;
+    if (!saved) return;
+    if (saved.amount !== amount) {
+      void navigate({ to: "/pay", search: { amount: saved.amount }, replace: true, viewTransition: false });
+      return;
+    }
     let stop = false;
     void getPaymentStatus({ data: { id: saved.id } })
       .then((row) => {
