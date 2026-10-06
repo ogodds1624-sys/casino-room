@@ -472,13 +472,13 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       memberName: row.member_name,
       memberEmail: row.member_email,
       hasReceipt: row.has_receipt === true || row.has_receipt === "t" || row.has_receipt === "true",
-      countsRevenue: !(row.counts_revenue === false || row.counts_revenue === "f" || row.counts_revenue === "false"),
-      confirmedAt: Number.isNaN(confirmed.getTime()) ? "" : confirmed.toISOString(),
+      countsRevenue: status === "confirmed" && !(row.counts_revenue === false || row.counts_revenue === "f" || row.counts_revenue === "false"),
+      confirmedAt: status !== "confirmed" || Number.isNaN(confirmed.getTime()) ? "" : confirmed.toISOString(),
       referredBy: row.referred_by,
       country: row.country === "Nigeria" ? "Nigeria" : row.country === "Ghana" ? "Ghana" : null,
     };
   });
-  const confirmedPayments = payments.filter((payment) => payment.status === "confirmed");
+  const confirmedPayments = payments.filter((payment) => payment.status === "confirmed" && payment.countsRevenue);
   const partnerRows = await sql<{
     id: string;
     name: string;
