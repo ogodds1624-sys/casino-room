@@ -1074,16 +1074,14 @@ function TransactionHistory({
                 <p className="text-sm text-[#6b7280]">{PACKAGE_NOTE[payment.amount] ?? ""}</p>
               </div>
               <div className="min-w-0">
-                {(payment.country === "Nigeria" || (!payment.country && isNairaAmount(payment.amount))) ? (
-                  payment.hasReceipt ? (
-                    <button type="button" disabled={opening === payment.id} onClick={() => void openProof(payment.id)} className="rounded-lg border border-[#86d4a0] px-2 py-1 text-[10px] font-extrabold text-[#7ddea0] disabled:opacity-60">
-                      {opening === payment.id ? "Opening…" : "Open picture"}
-                    </button>
-                  ) : (
-                    <p className="text-xs text-[#6b7280]">No proof</p>
-                  )
+                {payment.hasReceipt ? (
+                  <button type="button" disabled={opening === payment.id} onClick={() => void openProof(payment.id)} className="rounded-lg border border-[#86d4a0] px-2 py-1 text-[10px] font-extrabold text-[#7ddea0] disabled:opacity-60">
+                    {opening === payment.id ? "Opening…" : "Open payment"}
+                  </button>
+                ) : payment.payerName ? (
+                  <p className="truncate text-sm font-semibold">{payment.payerName}</p>
                 ) : (
-                  <p className="truncate text-sm font-semibold">{payment.payerName || "—"}</p>
+                  <p className="text-xs text-[#6b7280]">No proof</p>
                 )}
               </div>
               <div className="flex justify-center">
