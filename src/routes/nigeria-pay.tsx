@@ -5,7 +5,7 @@ import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snap
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
 import { SignalLoading } from "@/components/signal-loading";
-import { connectMinutesFor, startSession } from "@/lib/desk-session";
+import { clearPendingPayment, connectMinutesFor, readPendingPayment, savePendingPayment, sessionLeft, startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
@@ -67,6 +67,36 @@ function NigeriaPayPage() {
   }, [isPending, userId, devFallback, navigate]);
 
   useEffect(() => {
+    if (!ready || paymentId) return;
+    const saved = readPendingPayment();
+    if (!saved) return;
+    let stop = false;
+    void getPaymentStatus({ data: { id: saved.id } })
+      .then((row) => {
+        if (stop) return;
+        if (row.status === "rejected") {
+          clearPendingPayment();
+          setAlertOn(true);
+        } else if (row.status === "confirmed" && sessionLeft() > 0) {
+          clearPendingPayment();
+          void navigate({ to: "/session" });
+        } else {
+          setAmount(saved.amount);
+          setShowPay(true);
+          setWaiting(true);
+          setPaymentId(saved.id);
+          if (row.status === "confirmed") setResult("confirmed");
+        }
+      })
+      .catch(() => {
+        // Keep the saved payment so the next visit can resume waiting.
+      });
+    return () => {
+      stop = true;
+    };
+  }, [ready, paymentId, navigate]);
+
+  useEffect(() => {
     if (!paymentId || result !== "pending") return;
     const timer = window.setInterval(() => {
       void getPaymentStatus({ data: { id: paymentId } }).then((row) => {
@@ -81,11 +111,13 @@ function NigeriaPayPage() {
     if (result === "confirmed") {
       startSession(amount);
       const timer = window.setTimeout(() => {
+        clearPendingPayment();
         void navigate({ to: "/session" });
       }, connectMinutesFor(amount) * 60 * 1000);
       return () => window.clearTimeout(timer);
     }
     if (result === "rejected") {
+      clearPendingPayment();
       setWaiting(false);
       setPaymentId(null);
       setResult("pending");
@@ -152,6 +184,7 @@ function NigeriaPayPage() {
       await rememberReferral();
       const saved = await recordPayment({ data: { name: "", amount, receipt, referredBy: storedReferral() } });
       setPaymentId(saved.id);
+      savePendingPayment(saved.id, amount);
       setWaiting(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");

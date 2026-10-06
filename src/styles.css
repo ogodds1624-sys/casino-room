@@ -1063,20 +1063,23 @@
 
 .signal-loading-backdrop {
   position: fixed;
-  z-index: 50;
+  z-index: 100;
   inset: 0;
   display: grid;
+  width: 100vw;
+  height: 100dvh;
   place-items: center;
+  overflow: hidden;
   padding: 1.5rem;
   background:
-    radial-gradient(ellipse at 50% 46%, rgba(77, 18, 22, 0.26), transparent 42%),
-    rgba(5, 4, 5, 0.78);
-  backdrop-filter: blur(8px);
+    radial-gradient(ellipse at 50% 46%, rgba(77, 18, 22, 0.55), transparent 55%),
+    #060405;
 }
 
 .signal-loading-panel {
   display: grid;
-  width: min(100%, 20rem);
+  width: min(100%, 22rem);
+  margin: auto;
   justify-items: center;
   gap: 1.65rem;
   overflow: hidden;
@@ -1090,6 +1093,23 @@
     inset 0 1px rgba(255, 255, 255, 0.08),
     0 28px 90px rgba(0, 0, 0, 0.58),
     0 0 46px rgba(226, 59, 59, 0.1);
+}
+
+@media (min-width: 768px) {
+  .signal-loading-panel {
+    width: 26rem;
+    gap: 2rem;
+    padding: 1.4rem 1.8rem 1.8rem;
+  }
+
+  .signal-loading-panel .signal-loading-emblem {
+    width: 11rem;
+    height: 11rem;
+  }
+
+  .signal-loading-panel .signal-loading-label {
+    font-size: 0.85rem;
+  }
 }
 
 .signal-loading-brand {

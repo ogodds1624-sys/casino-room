@@ -5,7 +5,7 @@ import { SignalLoading } from "@/components/signal-loading";
 import { getPaymentStatus, getSportyLink, recordPayment } from "@/lib/admin-snapshot";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useLiveStorefront } from "@/lib/storefront-live";
-import { connectMinutesFor, startSession } from "@/lib/desk-session";
+import { clearPendingPayment, connectMinutesFor, readPendingPayment, savePendingPayment, sessionLeft, startSession } from "@/lib/desk-session";
 import { rememberReferral, storedReferral } from "@/lib/remember-ref";
 import { openTask } from "@/lib/task-order";
 
@@ -63,6 +63,34 @@ function PayPage() {
   }, [isPending, userId, devFallback, navigate]);
 
   useEffect(() => {
+    if (!allowed || paymentId) return;
+    const saved = readPendingPayment();
+    if (!saved || saved.amount !== amount) return;
+    let stop = false;
+    void getPaymentStatus({ data: { id: saved.id } })
+      .then((row) => {
+        if (stop) return;
+        if (row.status === "rejected") {
+          clearPendingPayment();
+          setResult("rejected");
+          setPaymentId(saved.id);
+        } else if (row.status === "confirmed" && sessionLeft() > 0) {
+          clearPendingPayment();
+          void navigate({ to: "/session" });
+        } else {
+          setPaymentId(saved.id);
+          if (row.status === "confirmed") setResult("confirmed");
+        }
+      })
+      .catch(() => {
+        // Keep the saved payment so the next visit can resume waiting.
+      });
+    return () => {
+      stop = true;
+    };
+  }, [allowed, amount, paymentId, navigate]);
+
+  useEffect(() => {
     if (!paymentId || result !== "pending") return;
     const timer = window.setInterval(() => {
       void getPaymentStatus({ data: { id: paymentId } }).then((row) => {
@@ -76,11 +104,13 @@ function PayPage() {
     if (result === "confirmed") {
       startSession(amount);
       const timer = window.setTimeout(() => {
+        clearPendingPayment();
         void navigate({ to: "/session" });
       }, connectMinutesFor(amount) * 60 * 1000);
       return () => window.clearTimeout(timer);
     }
     if (result === "rejected") {
+      clearPendingPayment();
       void navigate({ to: "/packages", search: { rejected: 1 }, viewTransition: false });
     }
   }, [result, amount, navigate]);
@@ -153,6 +183,7 @@ function PayPage() {
       await rememberReferral();
       const saved = await recordPayment({ data: { name: "", amount, receipt, referredBy: storedReferral() } });
       setPaymentId(saved.id);
+      savePendingPayment(saved.id, amount);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send that payment.");
     }

@@ -48,3 +48,26 @@ export function sessionLeft() {
   if (!session) return 0;
   return Math.max(0, session.endsAt - Date.now());
 }
+
+const PENDING_KEY = "casino-pending-payment";
+
+// Remembers a payment that is waiting for admin approval so a reload keeps the waiting screen.
+export function savePendingPayment(id: string, amount: number) {
+  window.localStorage.setItem(PENDING_KEY, JSON.stringify({ id, amount }));
+}
+
+export function readPendingPayment() {
+  try {
+    const raw = window.localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as { id?: unknown; amount?: unknown };
+    if (typeof data.id !== "string" || !Number.isFinite(data.amount)) return null;
+    return { id: data.id, amount: data.amount as number };
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingPayment() {
+  window.localStorage.removeItem(PENDING_KEY);
+}
