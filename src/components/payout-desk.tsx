@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getAdminPayouts, getPartnerPayouts, requestPartnerPayout, reviewPartnerPayout } from "@/lib/partner-payouts";
-import { PAYOUT_MOMO_PROVIDERS, validatePayoutRecipient, payoutMoney, type PayoutRequest, type PayoutCurrency, type PayoutRecipient } from "@/lib/payout-types";
+import { PAYOUT_MOMO_PROVIDERS, validatePayoutRecipient, payoutMoney, type PayoutRequest, type PayoutRecipient } from "@/lib/payout-types";
 
 function useLivePayouts<T>(load: () => Promise<T>, refreshVersion = 0) {
   const [data, setData] = useState<T | null>(null);
@@ -79,16 +79,16 @@ export function PartnerPayoutDesk({ token }: { token: string }) {
   const submitting = useRef(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [recipients, setRecipients] = useState<Record<PayoutCurrency, PayoutRecipient>>({
-    GHS: { method: "mobile_money", provider: PAYOUT_MOMO_PROVIDERS[0], accountName: "", accountNumber: "" },
-    NGN: { method: "bank", provider: "", accountName: "", accountNumber: "" },
+  const [receiving, setReceiving] = useState<PayoutRecipient>({
+    method: "mobile_money", provider: PAYOUT_MOMO_PROVIDERS[0], accountName: "", accountNumber: "",
   });
+  const updateRecipient = (patch: Partial<PayoutRecipient>) => setReceiving((current) => ({ ...current, ...patch }));
 
   async function request(balance: NonNullable<typeof data>["balances"][number]) {
     if (submitting.current) return;
     let recipient: PayoutRecipient;
     try {
-      recipient = validatePayoutRecipient(recipients[balance.currency], balance.currency);
+      recipient = validatePayoutRecipient(receiving);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Check your receiving details.");
       return;
@@ -119,39 +119,39 @@ export function PartnerPayoutDesk({ token }: { token: string }) {
       {error || actionError ? <p role="alert" className="text-sm text-red">{actionError ?? error}</p> : null}
       {notice ? <p role="status" className="text-sm text-green-400">{notice}</p> : null}
       {!data && !error ? <p role="status" className="text-sm text-[#9aa3b2]">Loading payout earnings...</p> : null}
+      <section className={panel}>
+        <h3 className="font-extrabold">Shared Ghana receiving details</h3>
+        <p className="mt-2 text-sm text-[#9aa3b2]">Both Ghana and Nigeria payout requests use these same Ghana mobile money or bank details. Nigeria earnings stay in NGN; this form does not convert currency. Each request keeps its own saved copy.</p>
+        <fieldset disabled={busy} className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="block text-sm">Receiving method
+            <select className={inputClass + " mt-1"} value={receiving.method} onChange={(event) => {
+              const method = event.target.value === "bank" ? "bank" : "mobile_money";
+              updateRecipient({ method, provider: method === "mobile_money" ? PAYOUT_MOMO_PROVIDERS[0] : "", accountNumber: "" });
+            }}><option value="mobile_money">Mobile money</option><option value="bank">Bank transfer</option></select>
+          </label>
+          <label className="block text-sm">{receiving.method === "bank" ? "Bank name" : "Mobile money provider"}
+            {receiving.method === "mobile_money" ? <select className={inputClass + " mt-1"} value={receiving.provider} onChange={(event) => updateRecipient({ provider: event.target.value })}>
+              {PAYOUT_MOMO_PROVIDERS.map((name) => <option key={name}>{name}</option>)}
+            </select> : <input className={inputClass + " mt-1"} value={receiving.provider} maxLength={100} onChange={(event) => updateRecipient({ provider: event.target.value })} placeholder="Enter your Ghana bank name" />}
+          </label>
+          <label className="block text-sm">Account holder name
+            <input className={inputClass + " mt-1"} value={receiving.accountName} maxLength={100} onChange={(event) => updateRecipient({ accountName: event.target.value })} autoComplete="name" placeholder="Name registered on the account" />
+          </label>
+          <label className="block text-sm">{receiving.method === "bank" ? "Bank account number" : "Mobile money number"}
+            <input className={inputClass + " mt-1"} value={receiving.accountNumber} maxLength={20} inputMode="numeric" onChange={(event) => updateRecipient({ accountNumber: event.target.value })} placeholder={receiving.method === "mobile_money" ? "10 digits, starting with 0" : "6 to 20 digits"} />
+          </label>
+        </fieldset>
+        <p className="mt-3 text-xs text-[#9aa3b2]">Check these details carefully. They are saved with each request and visible to your payout admin. Never enter a PIN, password or card security code. Editing this form does not change requests already submitted.</p>
+      </section>
       <div className="grid gap-4 md:grid-cols-2">
         {data?.balances.map((balance) => {
           const existing = data.requests.find((row) => row.earningDay === balance.earningDay && row.currency === balance.currency && row.status !== "rejected");
-          const recipient = recipients[balance.currency];
-          const updateRecipient = (patch: Partial<PayoutRecipient>) => setRecipients((current) => ({
-            ...current, [balance.currency]: { ...current[balance.currency], ...patch },
-          }));
           return (
             <section key={balance.currency} className={panel}>
               <h3 className="text-sm font-extrabold tracking-wide">{balance.currency === "GHS" ? "GHANA" : "NIGERIA"} · {balance.earningDay}</h3>
               <p className="mt-3 text-3xl font-black text-gold">{payoutMoney(balance.amount, balance.currency)}</p>
               <p className="mt-2 text-sm text-[#9aa3b2]">{payoutMoney(balance.grossAmount, balance.currency)} gross − {balance.commission}% commission</p>
-              {!existing ? <fieldset disabled={busy} className="mt-4 space-y-3">
-                <legend className="mb-2 text-sm font-extrabold">Receiving details</legend>
-                {balance.currency === "GHS" ? <label className="block text-sm">Receiving method
-                  <select className={inputClass + " mt-1"} value={recipient.method} onChange={(event) => {
-                    const method = event.target.value === "bank" ? "bank" : "mobile_money";
-                    updateRecipient({ method, provider: method === "mobile_money" ? PAYOUT_MOMO_PROVIDERS[0] : "", accountNumber: "" });
-                  }}><option value="mobile_money">Mobile money</option><option value="bank">Bank transfer</option></select>
-                </label> : <p className="text-sm text-[#9aa3b2]">Nigeria: bank transfer</p>}
-                <label className="block text-sm">{recipient.method === "bank" ? "Bank name" : "Mobile money provider"}
-                  {recipient.method === "mobile_money" ? <select className={inputClass + " mt-1"} value={recipient.provider} onChange={(event) => updateRecipient({ provider: event.target.value })}>
-                    {PAYOUT_MOMO_PROVIDERS.map((name) => <option key={name}>{name}</option>)}
-                  </select> : <input className={inputClass + " mt-1"} value={recipient.provider} maxLength={100} onChange={(event) => updateRecipient({ provider: event.target.value })} placeholder="Enter your bank name" />}
-                </label>
-                <label className="block text-sm">Account holder name
-                  <input className={inputClass + " mt-1"} value={recipient.accountName} maxLength={100} onChange={(event) => updateRecipient({ accountName: event.target.value })} autoComplete="name" placeholder="Name registered on the account" />
-                </label>
-                <label className="block text-sm">{recipient.method === "bank" ? "Bank account number" : "Mobile money number"}
-                  <input className={inputClass + " mt-1"} value={recipient.accountNumber} maxLength={20} inputMode="numeric" onChange={(event) => updateRecipient({ accountNumber: event.target.value })} placeholder={recipient.method === "mobile_money" ? "10 digits, starting with 0" : balance.currency === "NGN" ? "10-digit bank account number" : "6 to 20 digits"} />
-                </label>
-                <p className="text-xs text-[#9aa3b2]">Check these details carefully. They are saved with this request and visible to your payout admin. Never enter a PIN, password or card security code.</p>
-              </fieldset> : null}
+              {!existing ? <p className="mt-3 text-sm text-[#9aa3b2]">Uses the shared Ghana receiving details above.</p> : null}
               <button type="button" disabled={busy || Boolean(existing) || balance.amount <= 0 || Boolean(error)} onClick={() => void request(balance)} className={actionClass + " mt-4 w-full"}>
                 {existing ? (existing.status === "paid" ? "ALREADY PAID" : "REQUEST PENDING") : balance.amount <= 0 ? "NO EARNINGS YESTERDAY" : busy ? "SENDING..." : `REQUEST ${balance.currency} PAYOUT`}
               </button>

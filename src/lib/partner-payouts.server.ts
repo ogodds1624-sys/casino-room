@@ -70,7 +70,7 @@ export async function readAdminPayouts(sql: Sql) {
 }
 
 export async function createPayoutRequest(sql: Sql, token: string, balance: PayoutBalance, recipient: PayoutRecipient) {
-  const receiving = validatePayoutRecipient(recipient, balance.currency);
+  const receiving = validatePayoutRecipient(recipient);
   const amount = netPartnerEarnings(balance.grossAmount, balance.commission);
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("No earnings are available for yesterday.");
   const timeZone = balance.currency === "NGN" ? "Africa/Lagos" : "Africa/Accra";

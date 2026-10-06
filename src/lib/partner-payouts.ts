@@ -47,7 +47,7 @@ export const requestPartnerPayout = createServerFn({ method: "POST" })
     const { token } = partnerInput(data);
     if (data.currency !== "GHS" && data.currency !== "NGN") throw new Error("Choose Ghana or Nigeria earnings.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data.earningDay ?? "")) throw new Error("Missing earnings date.");
-    const recipient = validatePayoutRecipient(data.recipient, data.currency);
+    const recipient = validatePayoutRecipient(data.recipient);
     return { token, currency: data.currency, earningDay: data.earningDay, recipient };
   })
   .handler(async ({ data }) => {

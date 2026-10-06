@@ -13,18 +13,18 @@ function createPayoutRequest(sql: Sql, token: string, balance: PayoutBalance) {
   return insertPayoutRequest(sql, token, balance, receiving);
 }
 
-test("receiving details validate country-specific methods, numbers and required fields", () => {
-  assert.deepEqual(validatePayoutRecipient(receiving, "NGN"), receiving);
+test("shared Ghana receiving details validate methods, numbers and required fields", () => {
+  assert.deepEqual(validatePayoutRecipient(receiving), receiving);
   const momo: PayoutRecipient = { method: "mobile_money", provider: "MTN Mobile Money", accountName: "Test Partner", accountNumber: "0241234567" };
-  assert.deepEqual(validatePayoutRecipient(momo, "GHS"), momo);
-  assert.throws(() => validatePayoutRecipient(momo, "NGN"), /require a bank/);
-  assert.throws(() => validatePayoutRecipient(undefined, "GHS"), /receiving details/);
-  assert.throws(() => validatePayoutRecipient({ ...receiving, accountName: "" }, "GHS"), /holder/);
-  assert.throws(() => validatePayoutRecipient({ ...receiving, provider: "" }, "GHS"), /provider/);
-  assert.throws(() => validatePayoutRecipient({ ...receiving, accountNumber: "12345" }, "NGN"), /10-digit/);
-  assert.throws(() => validatePayoutRecipient({ ...receiving, accountNumber: "123x567890" }, "GHS"), /digits/);
-  assert.throws(() => validatePayoutRecipient({ ...momo, provider: "Unknown" }, "GHS"), /provider/);
-  assert.throws(() => validatePayoutRecipient({ ...momo, accountNumber: "241234567" }, "GHS"), /starting with 0/);
+  assert.deepEqual(validatePayoutRecipient(momo), momo);
+  assert.deepEqual(validatePayoutRecipient({ ...receiving, accountNumber: "001234" }), { ...receiving, accountNumber: "001234" });
+  assert.throws(() => validatePayoutRecipient(undefined), /receiving details/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, accountName: "" }), /holder/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, provider: "" }), /provider/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, accountNumber: "12345" }), /6 to 20/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, accountNumber: "123x567890" }), /digits/);
+  assert.throws(() => validatePayoutRecipient({ ...momo, provider: "Unknown" }), /provider/);
+  assert.throws(() => validatePayoutRecipient({ ...momo, accountNumber: "241234567" }), /starting with 0/);
 });
 
 test("admin sessions require configuration, correct credentials and an unexpired signature", () => {

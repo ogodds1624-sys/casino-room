@@ -50,10 +50,12 @@ this change does not retrofit access checks across those unrelated functions.
 
 ### Receiving details and transfer history
 
-Each new payout request requires an account holder name and receiving details:
-Ghana supports MTN Mobile Money, Telecel Cash, AirtelTigo Money or bank transfer;
-Nigeria supports bank transfer. Ghana wallet numbers are 10 digits starting with 0,
-Nigeria bank accounts are 10 digits, and Ghana bank accounts accept 6 to 20 digits.
+Both Ghana and Nigeria requests use one shared Ghana receiving-details form:
+account holder name plus MTN Mobile Money, Telecel Cash, AirtelTigo Money or a Ghana
+bank account. Wallet numbers are 10 digits starting with 0 and bank accounts accept
+6 to 20 digits. Nigeria earnings remain in NGN; no automatic currency conversion
+or funds transfer is performed. Each request saves a separate copy of the form,
+and existing request destinations are never rewritten when the form changes.
 Numbers are stored as text to preserve leading zeros. Never provide account PINs,
 passwords or card security codes.
 
