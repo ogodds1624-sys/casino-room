@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { AviatorBrandMark } from "@/components/aviator-brand-mark";
 import { UserButton } from "@/lib/auth/gates";
 import { getSportyLink } from "@/lib/admin-snapshot";
+import { signOut } from "@/lib/auth/client";
+import { useBlocked } from "@/lib/blocked-users";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export const SiteHeader = memo(function SiteHeader() {
@@ -10,9 +12,14 @@ export const SiteHeader = memo(function SiteHeader() {
   const [linkState, setLinkState] = useState<{ id: string; linked: boolean } | null>(null);
   const [mounted, setMounted] = useState(false);
   const userId = user && !user.isDevFallback ? user.id : "";
+  const blocked = useBlocked();
 
   useEffect(() => {
     setMounted(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   }, []);
 
   useEffect(() => {
@@ -31,8 +38,8 @@ export const SiteHeader = memo(function SiteHeader() {
   }, [userId]);
 
   const known = linkState?.id === userId ? linkState.linked : null;
-  const registered = Boolean(userId) && known === true;
-  const checking = Boolean(userId) && known === null;
+  const registered = Boolean(userId) && known === true && !blocked;
+  const checking = Boolean(userId) && known === null && !blocked;
 
   return (
     <header className="site-header sticky top-0 z-40 bg-ink">
@@ -57,12 +64,22 @@ export const SiteHeader = memo(function SiteHeader() {
             >
               Sign In
             </Link>
-            <Link
-              to="/register"
-              className="inline-flex h-9 items-center justify-center rounded-full bg-red px-3 text-xs font-bold text-white no-underline sm:h-10 sm:px-4 sm:text-sm"
-            >
-              Sign Up
-            </Link>
+            {blocked ? (
+              <button
+                type="button"
+                onClick={() => void signOut("/")}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-red px-3 text-xs font-bold text-white sm:h-10 sm:px-4 sm:text-sm"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                to="/register"
+                className="inline-flex h-9 items-center justify-center rounded-full bg-red px-3 text-xs font-bold text-white no-underline sm:h-10 sm:px-4 sm:text-sm"
+              >
+                Sign Up
+              </Link>
+            )}
           </>
         )}
       </div>

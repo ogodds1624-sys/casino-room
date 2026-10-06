@@ -117,6 +117,7 @@ export type AdminSnapshot = {
   payments: AdminPayment[];
   partners: AdminPartner[];
   testimonies: AdminTestimony[];
+  blocked: { email: string; createdAt: string }[];
   gateway: GatewaySettings;
   total: number;
   today: number;
@@ -586,11 +587,19 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       createdAt: Number.isNaN(created.getTime()) ? "" : created.toISOString(),
     };
   });
+  const { ensureBlockedTable } = await import("@/lib/blocked-users.server");
+  await ensureBlockedTable(sql);
+  const blockedRows = await sql<{ email: string; created_at: string | Date }>`select email, created_at from blocked_emails order by created_at desc`;
+  const blocked = blockedRows.map((row) => ({
+    email: row.email,
+    createdAt: (row.created_at instanceof Date ? row.created_at : new Date(row.created_at)).toISOString(),
+  }));
   return {
     members,
     payments,
     partners,
     testimonies,
+    blocked,
     gateway,
     total: members.length,
     today,
@@ -598,6 +607,34 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
     confirmed: confirmedPayments.length,
   };
 }
+
+export const blockUser = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string }) => {
+    const email = String(data?.email ?? "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new Error("Enter a valid email address.");
+    return { email };
+  })
+  .handler(async ({ data }) => {
+    const { getSql } = await import("@/lib/db");
+    const { ensureBlockedTable } = await import("@/lib/blocked-users.server");
+    const sql = await getSql();
+    await ensurePayments(sql);
+    await ensureBlockedTable(sql);
+    await sql`insert into blocked_emails (email) values (${data.email}) on conflict (email) do nothing`;
+    return readSnapshot(sql);
+  });
+
+export const unblockUser = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string }) => ({ email: String(data?.email ?? "").trim().toLowerCase() }))
+  .handler(async ({ data }) => {
+    const { getSql } = await import("@/lib/db");
+    const { ensureBlockedTable } = await import("@/lib/blocked-users.server");
+    const sql = await getSql();
+    await ensurePayments(sql);
+    await ensureBlockedTable(sql);
+    await sql`delete from blocked_emails where email = ${data.email}`;
+    return readSnapshot(sql);
+  });
 
 export const getApprovedTestimonies = createServerFn({ method: "GET" }).handler(async () => {
   const { getSql } = await import("@/lib/db");

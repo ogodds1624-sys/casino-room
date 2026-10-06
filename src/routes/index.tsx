@@ -9,6 +9,7 @@ import { getApprovedTestimonies, getSportyLink } from "@/lib/admin-snapshot";
 import { clearPending } from "@/lib/pending-registration";
 import { openTask } from "@/lib/task-order";
 import { useLiveStorefront } from "@/lib/storefront-live";
+import { useBlocked } from "@/lib/blocked-users";
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { ref?: string } => {
@@ -33,6 +34,7 @@ function Home() {
   const { user, isPending } = useCurrentUserState();
   const store = useLiveStorefront();
   const signedIn = !isPending && Boolean(user) && !user?.isDevFallback;
+  const blocked = useBlocked();
   const [tick, setTick] = useState(0);
   const [testimonies, setTestimonies] = useState<
     { name: string; place: string; text: string; stars: number }[]
@@ -41,7 +43,7 @@ function Home() {
   const [testimoniesError, setTestimoniesError] = useState(false);
 
   async function openAccount() {
-    if (isPending) return;
+    if (isPending || blocked) return;
     if (!signedIn) {
       await navigate({ to: "/register" });
       return;
@@ -91,6 +93,11 @@ function Home() {
   return (
     <div className="home-theme min-h-dvh text-white">
       <SiteHeader />
+      {blocked ? (
+        <p role="alert" className="bg-red px-4 py-3 text-center text-sm font-bold text-white">
+          This account has been blocked. You can sign in with another account or sign out.
+        </p>
+      ) : null}
       <div className="ticker-band">
         {testimoniesError ? (
           <p className="text-center text-sm font-semibold text-white/75">Testimonies are temporarily unavailable.</p>

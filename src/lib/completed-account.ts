@@ -8,7 +8,9 @@ export const enforceCompletedAccount = createServerFn({ method: "POST" }).handle
   const { getSessionUser } = await import("@/lib/auth/verify.server");
   const request = getRequest();
   const hasSessionCookie = (request?.headers.get("cookie") ?? "").includes(`${SESSION_COOKIE}=`);
-  const user = await getSessionUser();
+  const user = await getSessionUser(undefined, { includeBlocked: true });
+  // A blocked account stays on the front page rather than being cleared as stale.
+  if (user?.blocked) return { signedIn: true, completed: true, stale: false };
   if (!user) return { signedIn: false, completed: false, stale: hasSessionCookie };
   const { getSql } = await import("@/lib/db");
   const sql = await getSql();

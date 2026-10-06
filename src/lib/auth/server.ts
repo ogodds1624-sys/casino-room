@@ -30,6 +30,7 @@
  * a verified id via `@/lib/auth/middleware`.
  */
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { bearer, genericOAuth } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
@@ -289,6 +290,26 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 60,
     updateAge: 60 * 60 * 24,
     cookieCache: { enabled: true, maxAge: 300 },
+  },
+
+  // Blocked emails can neither create an account nor open a session (sign-in).
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          const { isEmailBlocked, BLOCKED_MESSAGE } = await import("../blocked-users.server");
+          if (await isEmailBlocked(user.email)) throw new APIError("FORBIDDEN", { message: BLOCKED_MESSAGE });
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session) => {
+          const { isUserIdBlocked, BLOCKED_MESSAGE } = await import("../blocked-users.server");
+          if (await isUserIdBlocked(session.userId)) throw new APIError("FORBIDDEN", { message: BLOCKED_MESSAGE });
+        },
+      },
+    },
   },
 
   // Local email/password — toggled only via `./email-password` (not a plugin).

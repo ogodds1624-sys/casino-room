@@ -4,6 +4,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { signOut } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { enforceCompletedAccount } from "@/lib/completed-account";
+import { useBlocked, useBlockWatcher } from "@/lib/blocked-users";
 import { PRESS_HOLD_MS } from "@/lib/press-motion";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { SupportChat } from "@/components/support-chat";
@@ -40,6 +41,19 @@ function CompletedSession() {
       stop = true;
     };
   }, [isPending, userId, devFallback]);
+
+  return null;
+}
+
+function BlockWatcher() {
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
+  useBlockWatcher(path);
+  const blocked = useBlocked();
+
+  useEffect(() => {
+    if (blocked && path !== "/" && path !== "/login" && path !== "/admin") void navigate({ to: "/", replace: true });
+  }, [blocked, path, navigate]);
 
   return null;
 }
@@ -193,6 +207,7 @@ export const Route = createRootRoute({
           <AuthProvider>
             <CaptureReferral />
             <CompletedSession />
+            <BlockWatcher />
             <TapBounce />
             <Outlet />
             <SupportChat />

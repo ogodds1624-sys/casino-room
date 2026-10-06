@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeftRight, Check, Diamond, Eye, EyeOff, Hexagon, LayoutGrid, List, Lock, RefreshCw, RotateCcw, Wallet } from "lucide-react";
+import { ArrowLeftRight, Ban, Check, Diamond, Eye, EyeOff, Hexagon, LayoutGrid, List, Lock, RefreshCw, RotateCcw, Wallet } from "lucide-react";
 import {
   addPartner,
+  blockUser,
+  unblockUser,
   confirmPayment,
   deletePartner,
   deleteTestimony,
@@ -42,6 +44,7 @@ const NAV = [
   { id: "members", label: "MEMBERS", icon: List },
   { id: "transactions", label: "TRANSACTIONS", icon: ArrowLeftRight },
   { id: "partners", label: "PARTNERS", icon: Hexagon },
+  { id: "block", label: "BLOCK", icon: Ban },
   { id: "gateway", label: "PAYMENT GATEWAY", icon: Wallet },
 ] as const;
 
@@ -121,6 +124,7 @@ const EMPTY_SNAPSHOT: AdminSnapshot = {
   payments: [],
   partners: [],
   testimonies: [],
+  blocked: [],
   total: 0,
   today: 0,
   revenue: 0,
@@ -467,8 +471,10 @@ function AdminPage() {
             </div>
           ) : tab === "partners" ? (
             <PartnerDesk partners={view.partners} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
+          ) : tab === "block" ? (
+            <BlockDesk rows={view.blocked} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
           ) : (
-            <PaymentGateway gateway={view.gateway} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
+            <PaymentGateway  gateway={view.gateway} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
           )}
         </div>
       </section>
@@ -1129,6 +1135,73 @@ function TransactionHistory({
           </div>
         </div>
       ) : null}
+    </section>
+  );
+}
+
+function BlockDesk({
+  rows,
+  busy,
+  onChange,
+  onBusy,
+}: {
+  rows: AdminSnapshot["blocked"];
+  busy: boolean;
+  onChange: (snapshot: AdminSnapshot) => void;
+  onBusy: (busy: boolean) => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+
+  async function run(action: () => Promise<AdminSnapshot>) {
+    onBusy(true);
+    setError("");
+    try {
+      onChange(await action());
+      return true;
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not update the block list.");
+      return false;
+    } finally {
+      onBusy(false);
+    }
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (await run(() => blockUser({ data: { email } }))) setEmail("");
+  }
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-[#111111] p-4">
+      <h2 className="text-2xl font-black">Block a user</h2>
+      <p className="mt-1 text-sm text-[#8b95a7]">A blocked email can no longer sign in. They stay on the front page with Sign In and Sign Out only.</p>
+      <form onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="user@email.com"
+          required
+          className="h-12 min-w-0 flex-1 rounded-xl border border-white/15 bg-ink px-3 text-sm outline-none"
+        />
+        <button type="submit" disabled={busy} className="h-12 rounded-xl bg-red px-6 text-sm font-extrabold disabled:opacity-60">
+          BLOCK
+        </button>
+      </form>
+      {error ? <p className="mt-3 text-sm font-bold text-[#ff8d8d]">{error}</p> : null}
+      <h3 className="mt-6 text-sm font-extrabold tracking-[0.14em] text-[#8b95a7]">BLOCKED ({rows.length})</h3>
+      {rows.length === 0 ? <p className="mt-3 text-sm text-[#8b95a7]">No blocked users.</p> : null}
+      <ul className="mt-3 grid gap-2">
+        {rows.map((row) => (
+          <li key={row.email} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-ink px-3 py-3">
+            <span className="min-w-0 truncate text-sm font-bold">{row.email}</span>
+            <button type="button" disabled={busy} onClick={() => void run(() => unblockUser({ data: { email: row.email } }))} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs font-extrabold disabled:opacity-60">
+              UNBLOCK
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

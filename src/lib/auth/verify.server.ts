@@ -42,7 +42,7 @@ export class UnauthorizedError extends Error {
   }
 }
 
-export type VerifiedUser = { id: string; email: string | null };
+export type VerifiedUser = { id: string; email: string | null; blocked?: boolean };
 
 /**
  * Resolve the signed-in user from the current request, or `null` when auth isn't
@@ -56,6 +56,7 @@ export type VerifiedUser = { id: string; email: string | null };
  */
 export async function getSessionUser(
   bearerToken?: string,
+  opts: { includeBlocked?: boolean } = {},
 ): Promise<VerifiedUser | null> {
   if (!authConfigured && !gateIdentityEnabled()) return null;
   const request = getRequest();
@@ -67,7 +68,12 @@ export async function getSessionUser(
   }
   const session = await auth.api.getSession({ headers });
   if (!session?.user) return null;
-  return { id: session.user.id, email: session.user.email ?? null };
+  const email = session.user.email ?? null;
+  // A blocked account counts as signed out everywhere except the block-state check itself.
+  const { isEmailBlocked } = await import("@/lib/blocked-users.server");
+  const blocked = await isEmailBlocked(email);
+  if (blocked && !opts.includeBlocked) return null;
+  return { id: session.user.id, email, blocked };
 }
 
 /**
