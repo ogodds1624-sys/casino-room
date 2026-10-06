@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowLeft, CalendarDays, CircleDollarSign, Copy, Diamond, LayoutGrid, Star, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, CircleDollarSign, Copy, Diamond, LayoutGrid, Star, Users, Wallet } from "lucide-react";
+import { PartnerPayoutDesk } from "@/components/payout-desk";
 import { SignalLoading } from "@/components/signal-loading";
 import { applyPartner, getPartnerGate, getPartnerPortal, partnerLogin, type PartnerPortal } from "@/lib/admin-snapshot";
 
@@ -18,7 +19,7 @@ function PartnersPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [desk, setDesk] = useState<"overview" | "referrals">("overview");
+  const [desk, setDesk] = useState<"overview" | "referrals" | "payouts">("overview");
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<"sign" | "apply">("sign");
   const [name, setName] = useState("");
@@ -302,6 +303,9 @@ function PartnersPage() {
           <DeskButton active={desk === "referrals"} onClick={() => setDesk("referrals")} icon={<Users className="size-4" />}>
             REFERRALS
           </DeskButton>
+          <DeskButton active={desk === "payouts"} onClick={() => setDesk("payouts")} icon={<Wallet className="size-4" />}>
+            PAYOUTS
+          </DeskButton>
         </nav>
         <button type="button" onClick={signOut} className="mt-auto px-3 py-3 text-left text-xs font-extrabold tracking-wide text-[#8b95a7]">
           SIGN OUT
@@ -323,13 +327,21 @@ function PartnersPage() {
           >
             REFERRALS
           </button>
+          <button type="button" onClick={() => setDesk("payouts")} className={"rounded-xl px-3 py-2 text-xs font-extrabold tracking-wide " + (desk === "payouts" ? "bg-red text-white" : "text-[#9aa3b2]")}>
+            PAYOUTS
+          </button>
           <button type="button" onClick={signOut} className="ml-auto text-xs font-bold text-[#8b95a7]">
             Sign out
           </button>
         </header>
         <div className="admin-content">
           {desk === "overview" ? (
-            <Overview portal={portal} link={link} copied={copied} onCopy={() => void copyLink()} />
+            <>
+              <Overview portal={portal} link={link} copied={copied} onCopy={() => void copyLink()} />
+              <button type="button" onClick={() => setDesk("payouts")} className="mt-5 min-h-12 w-full rounded-xl bg-red px-4 py-3 text-sm font-extrabold text-white">REQUEST YESTERDAY'S PAYOUT</button>
+            </>
+          ) : desk === "payouts" && token ? (
+            <PartnerPayoutDesk token={token} />
           ) : (
             <Referrals rows={portal.referrals} />
           )}
@@ -453,7 +465,7 @@ function DayList({
           <li key={country + day.label} className="partner-week week-row desk-row whitespace-nowrap text-sm">
             <span className={day.today ? "font-extrabold text-red" : "font-bold text-[#9aa3b2]"}>{day.label}</span>
             <span className="text-[#8b95a7]">
-              {money(day.revenue)} · {money(day.cut)} your cut
+              {money(day.revenue)} · {money(day.cut)} net earnings
             </span>
           </li>
         ))}

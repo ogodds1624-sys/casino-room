@@ -33,18 +33,20 @@ import {
 } from "@/lib/admin-snapshot";
 import { bumpGateway } from "@/lib/storefront-live";
 import { isNairaAmount } from "@/lib/desk-session";
+import { AdminPayoutDesk } from "@/components/payout-desk";
+import { adminSignIn, checkAdminSession } from "@/lib/partner-payouts";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-const ADMIN_PASS = "8057";
-const ADMIN_KEY = "aviator-admin-open";
+const ADMIN_KEY = "casino-admin-session";
 const NAV = [
   { id: "overview", label: "OVERVIEW", icon: LayoutGrid },
   { id: "members", label: "MEMBERS", icon: List },
   { id: "transactions", label: "TRANSACTIONS", icon: ArrowLeftRight },
   { id: "partners", label: "PARTNERS", icon: Hexagon },
+  { id: "payouts", label: "PARTNER PAYOUTS", icon: Wallet },
   { id: "block", label: "BLOCK", icon: Ban },
   { id: "gateway", label: "PAYMENT GATEWAY", icon: Wallet },
 ] as const;
@@ -147,6 +149,10 @@ const txCols = "tx-row desk-row grid-cols-[6.5rem_minmax(0,1.1fr)_minmax(0,0.9fr
 
 function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
+  const [adminToken, setAdminToken] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const [payoutRefresh, setPayoutRefresh] = useState(0);
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
   const [denied, setDenied] = useState(false);
@@ -162,7 +168,19 @@ function AdminPage() {
   const passTyped = useRef(false);
 
   useEffect(() => {
-    if (window.sessionStorage.getItem(ADMIN_KEY) === "1") setUnlocked(true);
+    const saved = window.sessionStorage.getItem(ADMIN_KEY);
+    if (!saved) return;
+    let live = true;
+    void checkAdminSession({ data: { adminToken: saved } }).then(() => {
+      if (!live) return;
+      setAdminToken(saved);
+      setUnlocked(true);
+    }).catch((err) => {
+      if (!live) return;
+      window.sessionStorage.removeItem(ADMIN_KEY);
+      setSignInError(err instanceof Error ? err.message : "Could not verify admin sign-in.");
+    });
+    return () => { live = false; };
   }, []);
 
   useEffect(() => {
@@ -230,20 +248,29 @@ function AdminPage() {
     };
   }, [unlocked]);
 
-  function unlock(event: FormEvent) {
+  async function unlock(event: FormEvent) {
     event.preventDefault();
-    if (code.trim() === ADMIN_PASS) {
-      window.sessionStorage.setItem(ADMIN_KEY, "1");
+    if (signingIn) return;
+    setSigningIn(true);
+    setSignInError(null);
+    try {
+      const result = await adminSignIn({ data: { passcode: code.trim() } });
+      window.sessionStorage.setItem(ADMIN_KEY, result.token);
+      setAdminToken(result.token);
       setCode("");
       setShowCode(false);
       setUnlocked(true);
       setDenied(false);
-      return;
+    } catch (err) {
+      setDenied(true);
+      setSignInError(err instanceof Error ? err.message : "Could not sign in as admin.");
+    } finally {
+      setSigningIn(false);
     }
-    setDenied(true);
   }
 
   async function refresh() {
+    setPayoutRefresh((value) => value + 1);
     setSpinning(true);
     try {
       setSnapshot(await getAdminSnapshot());
@@ -296,6 +323,15 @@ function AdminPage() {
   const pendingCount = view.payments.filter((payment) => payment.status === "pending").length;
   const partnerWait = view.partners.filter((partner) => partner.status === "pending").length;
 
+  function signOut() {
+    window.sessionStorage.removeItem(ADMIN_KEY);
+    setAdminToken("");
+    setUnlocked(false);
+    setSnapshot(null);
+    setSignInError(null);
+    setDenied(false);
+  }
+
   function openTab(next: Tab) {
     setTab(next);
     if (next === "transactions") {
@@ -308,14 +344,14 @@ function AdminPage() {
   if (!unlocked) {
     return (
       <main className="home-theme relative flex min-h-dvh items-center justify-center px-4 py-10 text-white">
-        <form autoComplete="off" onSubmit={unlock} className="menu-pop relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
+        <form autoComplete="off" onSubmit={(event) => void unlock(event)} className="menu-pop relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-[#111111] px-6 py-8 text-center shadow-[0_20px_60px_rgba(226,59,59,0.18)]">
           <div className="mx-auto grid size-16 place-items-center rounded-full border border-red/40 bg-red/15">
             <Lock className="size-7 text-gold" aria-hidden />
           </div>
           <h1 className="mt-5 text-3xl font-black tracking-tight">Admin Access</h1>
           <p className="mt-2 text-sm font-semibold text-[#9aa3b2]">Enter your admin passcode.</p>
-          {denied ? (
-            <p className="mt-5 rounded-2xl border border-red/40 bg-red/15 px-4 py-3 text-sm font-bold text-red">Wrong passcode.</p>
+          {signInError ? (
+            <p role="alert" className="mt-5 rounded-2xl border border-red/40 bg-red/15 px-4 py-3 text-sm font-bold text-red">{signInError}</p>
           ) : null}
           <label htmlFor="admin-pass" className="sr-only">
             Passcode
@@ -331,7 +367,6 @@ function AdminPage() {
                 setDenied(false);
               }}
               type={showCode ? "text" : "password"}
-              inputMode="numeric"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
@@ -349,8 +384,8 @@ function AdminPage() {
               {showCode ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
             </button>
           </div>
-          <button type="submit" className="mt-5 h-14 w-full rounded-2xl bg-red text-sm font-extrabold tracking-[0.22em] text-white">
-            SIGN IN
+          <button type="submit" disabled={signingIn} className="mt-5 h-14 w-full rounded-2xl bg-red text-sm font-extrabold tracking-[0.22em] text-white disabled:opacity-50">
+            {signingIn ? "SIGNING IN..." : "SIGN IN"}
           </button>
         </form>
       </main>
@@ -395,6 +430,7 @@ function AdminPage() {
             );
           })}
         </nav>
+        <button type="button" onClick={signOut} className="mt-auto min-h-11 px-3 py-3 text-left text-xs font-extrabold text-[#9aa3b2]">SIGN OUT</button>
       </aside>
       <section className="min-w-0 flex-1">
         <header className="admin-mobile-nav border-b border-white/10 bg-ink">
@@ -402,6 +438,7 @@ function AdminPage() {
             <Diamond className="size-4 shrink-0 fill-red text-red" aria-hidden />
             <span className="truncate text-lg font-black tracking-tight">Casino</span>
             <span className="rounded-full border border-red px-2.5 py-1 text-[11px] font-extrabold tracking-wide text-red">ADMIN</span>
+            <button type="button" onClick={signOut} className="ml-auto min-h-11 px-2 text-xs font-extrabold text-[#9aa3b2]">SIGN OUT</button>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3">
             {NAV.map((item) => {
@@ -482,6 +519,8 @@ function AdminPage() {
             </div>
           ) : tab === "partners" ? (
             <PartnerDesk partners={view.partners} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
+          ) : tab === "payouts" ? (
+            <AdminPayoutDesk adminToken={adminToken} refreshVersion={payoutRefresh} />
           ) : tab === "block" ? (
             <BlockDesk rows={view.blocked} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
           ) : (

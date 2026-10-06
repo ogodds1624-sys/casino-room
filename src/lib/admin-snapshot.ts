@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Sql } from "@/lib/db";
 import { isNairaAmount } from "@/lib/desk-session";
+import { netPartnerEarnings } from "@/lib/partner-earnings";
+import type { PayoutBalance } from "@/lib/payout-types";
 
 export type AdminMember = {
   id: string;
@@ -126,6 +128,7 @@ export type AdminSnapshot = {
 };
 
 export type PartnerPortal = {
+  payoutBalances: PayoutBalance[];
   name: string;
   code: string;
   commission: number;
@@ -181,10 +184,6 @@ export function isNairaPayment(amount: number, country: string | null | undefine
   if (country === "Nigeria") return true;
   if (country === "Ghana") return false;
   return isNairaAmount(amount);
-}
-
-export function commissionCut(amount: number, percent: number) {
-  return Math.round((amount * percent) / 100);
 }
 
 export function liveDayLabel(key: string, timeZone: string) {
@@ -1334,11 +1333,14 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }): Promise<PartnerPortal> => {
     const { getSql } = await import("@/lib/db");
-    const sql = await getSql();
+    return readPartnerPortal(await getSql(), data.token);
+  });
+
+export async function readPartnerPortal(sql: Sql, token: string): Promise<PartnerPortal> {
     await ensurePayments(sql);
     await sql`alter table partners add column if not exists token text`;
     const rows = await sql<{ name: string; code: string; status: string; commission: number | string }>`
-      select name, code, status, commission from partners where token = ${data.token}
+      select name, code, status, commission from partners where token = ${token}
     `;
     const partner = rows[0];
     if (!partner || partner.status !== "approved") throw new Error("Sign in again.");
@@ -1372,7 +1374,7 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       where p.status = 'confirmed' and p.counts_revenue is not false
         and lower(partner.code) = ${code}
     `;
-    const cut = (amount: number) => commissionCut(amount, commission);
+    const earnings = (amount: number) => netPartnerEarnings(amount, commission);
     const ghanaPayments = payments.filter((row) => !isNairaPayment(Number(row.amount), row.country));
     const nigeriaPayments = payments.filter((row) => isNairaPayment(Number(row.amount), row.country));
     const revenue = ghanaPayments.reduce((sum, row) => sum + Number(row.amount), 0);
@@ -1393,12 +1395,23 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
         return {
           label: liveDayLabel(key, timeZone),
           revenue: amount,
-          cut: cut(amount),
+          cut: earnings(amount),
           today: key === todayKey,
         };
       });
     const days = buildDays(ghanaPayments, GHANA_TZ, ghanaToday);
     const nigeriaDays = buildDays(nigeriaPayments, NIGERIA_TZ, nigeriaToday);
+    const payoutSources: { currency: PayoutBalance["currency"]; rows: typeof payments; timeZone: string; todayKey: string }[] = [
+      { currency: "GHS", rows: ghanaPayments, timeZone: GHANA_TZ, todayKey: ghanaToday },
+      { currency: "NGN", rows: nigeriaPayments, timeZone: NIGERIA_TZ, todayKey: nigeriaToday },
+    ];
+    const payoutBalances: PayoutBalance[] = payoutSources.map(({ currency, rows, timeZone, todayKey }) => {
+      const earningDay = shiftDayKey(todayKey, -1, timeZone);
+      const grossAmount = rows
+        .filter((row) => dayKeyInZone(row.created_at, timeZone) === earningDay)
+        .reduce((sum, row) => sum + Number(row.amount), 0);
+      return { currency, earningDay, grossAmount, commission, amount: earnings(grossAmount) };
+    });
     const spendGhs = new Map<string, number>();
     const spendNgn = new Map<string, number>();
     for (const row of payments) {
@@ -1431,6 +1444,7 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       };
     });
     return {
+      payoutBalances,
       name: partner.name,
       code: partner.code,
       commission,
@@ -1438,19 +1452,19 @@ export const getPartnerPortal = createServerFn({ method: "POST" })
       active: new Set(payments.map((row) => row.user_id)).size,
       todayRevenue,
       todaySales: todayPayments.length,
-      todayCut: cut(todayRevenue),
+      todayCut: earnings(todayRevenue),
       revenue,
-      earnings: cut(revenue),
+      earnings: earnings(revenue),
       nigeriaTodayRevenue,
       nigeriaTodaySales: nigeriaTodayPayments.length,
-      nigeriaTodayCut: cut(nigeriaTodayRevenue),
+      nigeriaTodayCut: earnings(nigeriaTodayRevenue),
       nigeriaRevenue,
-      nigeriaEarnings: cut(nigeriaRevenue),
+      nigeriaEarnings: earnings(nigeriaRevenue),
       days,
       nigeriaDays,
       referrals,
     };
-  });
+}
 
 export const saveGatewayRates = createServerFn({ method: "POST" })
   .inputValidator((data: GatewayRates) => {
