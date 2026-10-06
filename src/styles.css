@@ -667,7 +667,7 @@
   pointer-events: none;
 }
 
-.home-theme > :not(header) {
+.home-theme > :not(header):not(.signal-loading-backdrop):not(.reject-alert) {
   position: relative;
   z-index: 1;
 }
