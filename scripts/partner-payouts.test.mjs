@@ -73,7 +73,8 @@ test("payout server functions derive yesterday's earnings and enforce partner/ad
         ('gh-reversed', 'Ghana', 900, 'confirmed', 'FIXTURE', 'gh-fixture', false, now() - interval '1 day');
       insert into player_country (user_id, country) values ('gh-fixture', 'Ghana'), ('ng-fixture', 'Nigeria');
     `);
-    const partnerData = { token: "fixture-token" };
+    const recipient = { method: "bank", provider: "Test Bank", accountName: "Payout Fixture", accountNumber: "0012345678" };
+    const partnerData = { token: "fixture-token", recipient };
     const portal = await api.getPartnerPortal({ data: partnerData });
     const payouts = await api.getPartnerPayouts({ data: partnerData });
     const gh = payouts.balances.find((row) => row.currency === "GHS");
@@ -89,15 +90,22 @@ test("payout server functions derive yesterday's earnings and enforce partner/ad
     await assert.rejects(api.requestPartnerPayout({ data: { ...partnerData, currency: "USD", earningDay: gh.earningDay } }), /Choose Ghana/);
     const requested = await api.requestPartnerPayout({ data: { ...partnerData, currency: "GHS", earningDay: gh.earningDay, amount: 999999, commission: 0 } });
     assert.equal(requested.requests[0].amount, 800);
+    assert.deepEqual(requested.requests[0].recipient, recipient);
+    await assert.rejects(api.requestPartnerPayout({ data: { token: partnerData.token, currency: "NGN", earningDay: ng.earningDay } }), /receiving details/);
+    await assert.rejects(api.requestPartnerPayout({ data: { ...partnerData, currency: "NGN", earningDay: ng.earningDay, recipient: { ...recipient, method: "mobile_money" } } }), /require a bank/);
     await assert.rejects(api.requestPartnerPayout({ data: { ...partnerData, currency: "GHS", earningDay: gh.earningDay } }), /already pending or paid/);
 
     process.env.ADMIN_PASSCODE = randomBytes(24).toString("hex");
     await assert.rejects(api.getAdminPayouts({ data: { adminToken: "forged" } }), /expired/);
-    await assert.rejects(api.reviewPartnerPayout({ data: { adminToken: "forged", id: requested.requests[0].id, status: "paid", note: "" } }), /expired/);
+    await assert.rejects(api.reviewPartnerPayout({ data: { adminToken: "forged", id: requested.requests[0].id, status: "paid", note: "", transferReference: "TEST" } }), /expired/);
     const { token: adminToken } = await api.adminSignIn({ data: { passcode: process.env.ADMIN_PASSCODE } });
     assert.equal((await api.getAdminPayouts({ data: { adminToken } })).length, 1);
-    await api.reviewPartnerPayout({ data: { adminToken, id: requested.requests[0].id, status: "paid", note: "TEST-REFERENCE" } });
-    assert.equal((await api.getPartnerPayouts({ data: partnerData })).requests[0].status, "paid");
+    await assert.rejects(api.reviewPartnerPayout({ data: { adminToken, id: requested.requests[0].id, status: "paid", note: "" } }), /transfer reference/);
+    await api.reviewPartnerPayout({ data: { adminToken, id: requested.requests[0].id, status: "paid", note: "Transfer completed", transferReference: "TEST-REFERENCE" } });
+    const transfer = (await api.getPartnerPayouts({ data: partnerData })).requests[0];
+    assert.equal(transfer.status, "paid");
+    assert.equal(transfer.transferReference, "TEST-REFERENCE");
+    assert.deepEqual(transfer.recipient, recipient);
 
     await pg.exec("update partners set commission = 35 where id = 'payout-fixture'");
     const updated = await api.getPartnerPayouts({ data: partnerData });

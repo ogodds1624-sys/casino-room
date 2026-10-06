@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getAdminPayouts, getPartnerPayouts, requestPartnerPayout, reviewPartnerPayout } from "@/lib/partner-payouts";
-import { payoutMoney, type PayoutRequest } from "@/lib/payout-types";
+import { PAYOUT_MOMO_PROVIDERS, validatePayoutRecipient, payoutMoney, type PayoutRequest, type PayoutCurrency, type PayoutRecipient } from "@/lib/payout-types";
 
 function useLivePayouts<T>(load: () => Promise<T>, refreshVersion = 0) {
   const [data, setData] = useState<T | null>(null);
@@ -55,6 +55,15 @@ function PayoutHistory({ rows, admin = false, children }: {
           <p className="mt-3 text-sm text-[#9aa3b2]">{payoutMoney(row.grossAmount, row.currency)} gross − {row.commission}% commission</p>
           <p className="mt-1 text-xs text-[#9aa3b2]">Requested {new Date(row.createdAt).toLocaleString()}</p>
           {row.reviewedAt ? <p className="mt-1 text-xs text-[#9aa3b2]">Reviewed {new Date(row.reviewedAt).toLocaleString()}</p> : null}
+          {row.recipient ? (
+            <dl className="mt-4 grid gap-2 rounded-xl border border-white/10 p-3 text-sm">
+              <div><dt className="text-[#9aa3b2]">Receiving method</dt><dd>{row.recipient.method === "bank" ? "Bank transfer" : "Mobile money"}</dd></div>
+              <div><dt className="text-[#9aa3b2]">Bank / provider</dt><dd className="break-words">{row.recipient.provider}</dd></div>
+              <div><dt className="text-[#9aa3b2]">Account holder</dt><dd className="break-words">{row.recipient.accountName}</dd></div>
+              <div><dt className="text-[#9aa3b2]">Account / wallet number</dt><dd className="break-all font-bold">{row.recipient.accountNumber}</dd></div>
+            </dl>
+          ) : <p className="mt-3 text-sm text-red">Legacy request: receiving details were not supplied.</p>}
+          {row.transferReference ? <p className="mt-3 break-all text-sm font-bold">Transfer reference: {row.transferReference}</p> : null}
           {row.reviewNote ? <p className="mt-3 break-words text-sm text-white">Admin note: {row.reviewNote}</p> : null}
           {children?.(row)}
         </article>
@@ -70,15 +79,26 @@ export function PartnerPayoutDesk({ token }: { token: string }) {
   const submitting = useRef(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [recipients, setRecipients] = useState<Record<PayoutCurrency, PayoutRecipient>>({
+    GHS: { method: "mobile_money", provider: PAYOUT_MOMO_PROVIDERS[0], accountName: "", accountNumber: "" },
+    NGN: { method: "bank", provider: "", accountName: "", accountNumber: "" },
+  });
 
   async function request(balance: NonNullable<typeof data>["balances"][number]) {
     if (submitting.current) return;
+    let recipient: PayoutRecipient;
+    try {
+      recipient = validatePayoutRecipient(recipients[balance.currency], balance.currency);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Check your receiving details.");
+      return;
+    }
     submitting.current = true;
     setBusy(true);
     setNotice(null);
     setActionError(null);
     try {
-      await requestPartnerPayout({ data: { token, currency: balance.currency, earningDay: balance.earningDay } });
+      await requestPartnerPayout({ data: { token, currency: balance.currency, earningDay: balance.earningDay, recipient } });
       await reload();
       setNotice("Payout request sent. Your admin will review it.");
     } catch (err) {
@@ -102,11 +122,36 @@ export function PartnerPayoutDesk({ token }: { token: string }) {
       <div className="grid gap-4 md:grid-cols-2">
         {data?.balances.map((balance) => {
           const existing = data.requests.find((row) => row.earningDay === balance.earningDay && row.currency === balance.currency && row.status !== "rejected");
+          const recipient = recipients[balance.currency];
+          const updateRecipient = (patch: Partial<PayoutRecipient>) => setRecipients((current) => ({
+            ...current, [balance.currency]: { ...current[balance.currency], ...patch },
+          }));
           return (
             <section key={balance.currency} className={panel}>
               <h3 className="text-sm font-extrabold tracking-wide">{balance.currency === "GHS" ? "GHANA" : "NIGERIA"} · {balance.earningDay}</h3>
               <p className="mt-3 text-3xl font-black text-gold">{payoutMoney(balance.amount, balance.currency)}</p>
               <p className="mt-2 text-sm text-[#9aa3b2]">{payoutMoney(balance.grossAmount, balance.currency)} gross − {balance.commission}% commission</p>
+              {!existing ? <fieldset disabled={busy} className="mt-4 space-y-3">
+                <legend className="mb-2 text-sm font-extrabold">Receiving details</legend>
+                {balance.currency === "GHS" ? <label className="block text-sm">Receiving method
+                  <select className={inputClass + " mt-1"} value={recipient.method} onChange={(event) => {
+                    const method = event.target.value === "bank" ? "bank" : "mobile_money";
+                    updateRecipient({ method, provider: method === "mobile_money" ? PAYOUT_MOMO_PROVIDERS[0] : "", accountNumber: "" });
+                  }}><option value="mobile_money">Mobile money</option><option value="bank">Bank transfer</option></select>
+                </label> : <p className="text-sm text-[#9aa3b2]">Nigeria: bank transfer</p>}
+                <label className="block text-sm">{recipient.method === "bank" ? "Bank name" : "Mobile money provider"}
+                  {recipient.method === "mobile_money" ? <select className={inputClass + " mt-1"} value={recipient.provider} onChange={(event) => updateRecipient({ provider: event.target.value })}>
+                    {PAYOUT_MOMO_PROVIDERS.map((name) => <option key={name}>{name}</option>)}
+                  </select> : <input className={inputClass + " mt-1"} value={recipient.provider} maxLength={100} onChange={(event) => updateRecipient({ provider: event.target.value })} placeholder="Enter your bank name" />}
+                </label>
+                <label className="block text-sm">Account holder name
+                  <input className={inputClass + " mt-1"} value={recipient.accountName} maxLength={100} onChange={(event) => updateRecipient({ accountName: event.target.value })} autoComplete="name" placeholder="Name registered on the account" />
+                </label>
+                <label className="block text-sm">{recipient.method === "bank" ? "Bank account number" : "Mobile money number"}
+                  <input className={inputClass + " mt-1"} value={recipient.accountNumber} maxLength={20} inputMode="numeric" onChange={(event) => updateRecipient({ accountNumber: event.target.value })} placeholder={recipient.method === "mobile_money" ? "10 digits, starting with 0" : balance.currency === "NGN" ? "10-digit bank account number" : "6 to 20 digits"} />
+                </label>
+                <p className="text-xs text-[#9aa3b2]">Check these details carefully. They are saved with this request and visible to your payout admin. Never enter a PIN, password or card security code.</p>
+              </fieldset> : null}
               <button type="button" disabled={busy || Boolean(existing) || balance.amount <= 0 || Boolean(error)} onClick={() => void request(balance)} className={actionClass + " mt-4 w-full"}>
                 {existing ? (existing.status === "paid" ? "ALREADY PAID" : "REQUEST PENDING") : balance.amount <= 0 ? "NO EARNINGS YESTERDAY" : busy ? "SENDING..." : `REQUEST ${balance.currency} PAYOUT`}
               </button>
@@ -114,7 +159,7 @@ export function PartnerPayoutDesk({ token }: { token: string }) {
           );
         })}
       </div>
-      <h2 className="text-xl font-black">Your payout history</h2>
+      <h2 className="text-xl font-black">Your payout and transfer history</h2>
       {data ? <PayoutHistory rows={data.requests} /> : null}
     </div>
   );
@@ -125,6 +170,7 @@ export function AdminPayoutDesk({ adminToken, refreshVersion = 0 }: { adminToken
   const { data, error, reload } = useLivePayouts(load, refreshVersion);
   const [filter, setFilter] = useState<"all" | PayoutRequest["status"]>("pending");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [references, setReferences] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -133,6 +179,11 @@ export function AdminPayoutDesk({ adminToken, refreshVersion = 0 }: { adminToken
   async function review(row: PayoutRequest, status: "paid" | "rejected") {
     if (submitting.current) return;
     const note = notes[row.id]?.trim() ?? "";
+    const transferReference = references[row.id]?.trim() ?? "";
+    if (status === "paid" && (!row.recipient || !transferReference)) {
+      setActionError(row.recipient ? "Enter the transfer reference before marking this payout paid." : "Receiving details are missing. Reject this legacy request and ask the partner to resubmit.");
+      return;
+    }
     if (status === "rejected" && !note) {
       setActionError("Enter a reason before rejecting a payout.");
       return;
@@ -143,7 +194,7 @@ export function AdminPayoutDesk({ adminToken, refreshVersion = 0 }: { adminToken
     setActionError(null);
     setNotice(null);
     try {
-      await reviewPartnerPayout({ data: { adminToken, id: row.id, status, note } });
+      await reviewPartnerPayout({ data: { adminToken, id: row.id, status, note, transferReference } });
       await reload();
       setNotice(status === "paid" ? "Payout marked paid." : "Payout rejected. The partner can see your reason.");
     } catch (err) {
@@ -157,7 +208,7 @@ export function AdminPayoutDesk({ adminToken, refreshVersion = 0 }: { adminToken
   return (
     <div className="mt-6 space-y-4">
       <h2 className="text-2xl font-black">Partner payout requests</h2>
-      <p className="text-sm text-[#9aa3b2]">Review yesterday's net earnings requests. Send the payout manually before marking it paid. Submitted amounts and commission rates are saved for your records.</p>
+      <p className="text-sm text-[#9aa3b2]">Review receiving details and send the payout manually before marking it paid. A transfer reference is required. The Paid filter keeps transfer history, including the original receiving details, amount and payment date.</p>
       <div className="flex flex-wrap gap-2">
         {(["pending", "paid", "rejected", "all"] as const).map((status) => (
           <button key={status} type="button" onClick={() => setFilter(status)} className={"min-h-11 rounded-xl px-4 text-xs font-extrabold uppercase " + (filter === status ? "bg-red text-white" : "border border-white/15 text-[#9aa3b2]")}>
@@ -172,8 +223,11 @@ export function AdminPayoutDesk({ adminToken, refreshVersion = 0 }: { adminToken
         {(row) => row.status === "pending" ? (
           <div className="mt-4 space-y-3">
             <label className="block text-sm text-[#9aa3b2]">
-              Payment reference or rejection reason
-              <textarea value={notes[row.id] ?? ""} maxLength={500} disabled={busy} onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))} className={inputClass + " mt-2"} placeholder="Required when rejecting; optional payment reference when paid" />
+              Admin note or rejection reason
+              <textarea value={notes[row.id] ?? ""} maxLength={500} disabled={busy} onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))} className={inputClass + " mt-2"} placeholder="Required when rejecting; optional admin note when paid" />
+            </label>
+            <label className="block text-sm text-[#9aa3b2]">Transfer reference
+              <input value={references[row.id] ?? ""} maxLength={150} disabled={busy} onChange={(event) => setReferences((current) => ({ ...current, [row.id]: event.target.value }))} className={inputClass + " mt-2"} placeholder="Required after sending payment" />
             </label>
             <div className="flex flex-wrap gap-3">
               <button type="button" disabled={busy || Boolean(error)} onClick={() => void review(row, "paid")} className={actionClass}>MARK PAID</button>

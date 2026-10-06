@@ -47,3 +47,28 @@ Every payout admin query and mutation verifies that session on the server.
 Changing ADMIN_PASSCODE invalidates existing admin sessions.
 Existing non-payout admin server functions retain their previous access behavior;
 this change does not retrofit access checks across those unrelated functions.
+
+### Receiving details and transfer history
+
+Each new payout request requires an account holder name and receiving details:
+Ghana supports MTN Mobile Money, Telecel Cash, AirtelTigo Money or bank transfer;
+Nigeria supports bank transfer. Ghana wallet numbers are 10 digits starting with 0,
+Nigeria bank accounts are 10 digits, and Ghana bank accounts accept 6 to 20 digits.
+Numbers are stored as text to preserve leading zeros. Never provide account PINs,
+passwords or card security codes.
+
+The receiving method, bank/provider, account holder and number are saved on the
+individual request, not a mutable partner profile. Verified admins see those details
+on the payout card. Partners see only their own requests. Details are not saved in
+browser storage, and changing details on a new request does not rewrite old history.
+
+Marking a payout paid requires a transfer reference after the admin manually sends
+the money. Partner history and the admin Paid filter retain the receiving details,
+amount, earnings date, submitted commission, request/review timestamps, transfer
+reference and admin note. Paid records cannot be reviewed again or removed through
+the payout workflow. Rejected attempts also remain in history.
+
+Migration `0008_payout_receiving_details.sql` leaves older records intact. Legacy
+requests without receiving details remain visible; pending legacy requests must
+be rejected and resubmitted with details (if their earnings date is still yesterday)
+before they can be marked paid.

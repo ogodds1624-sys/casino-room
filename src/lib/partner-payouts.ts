@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { PayoutCurrency } from "./payout-types";
+import { validatePayoutRecipient, type PayoutCurrency, type PayoutRecipient } from "./payout-types";
 
 function partnerInput(data: { token: string }) {
   const token = data?.token?.trim() ?? "";
@@ -43,11 +43,12 @@ export const getPartnerPayouts = createServerFn({ method: "POST" })
   });
 
 export const requestPartnerPayout = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; currency: PayoutCurrency; earningDay: string }) => {
+  .inputValidator((data: { token: string; currency: PayoutCurrency; earningDay: string; recipient: PayoutRecipient }) => {
     const { token } = partnerInput(data);
     if (data.currency !== "GHS" && data.currency !== "NGN") throw new Error("Choose Ghana or Nigeria earnings.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data.earningDay ?? "")) throw new Error("Missing earnings date.");
-    return { token, currency: data.currency, earningDay: data.earningDay };
+    const recipient = validatePayoutRecipient(data.recipient, data.currency);
+    return { token, currency: data.currency, earningDay: data.earningDay, recipient };
   })
   .handler(async ({ data }) => {
     const { readPartnerPortal } = await import("./admin-snapshot");
@@ -56,7 +57,7 @@ export const requestPartnerPayout = createServerFn({ method: "POST" })
     const portal = await readPartnerPortal(sql, data.token);
     const balance = portal.payoutBalances.find((item) => item.currency === data.currency && item.earningDay === data.earningDay);
     if (!balance) throw new Error("You can only request yesterday's earnings. Refresh and try again.");
-    await createPayoutRequest(sql, data.token, balance);
+    await createPayoutRequest(sql, data.token, balance, data.recipient);
     return { balances: portal.payoutBalances, requests: await readPartnerPayouts(sql, data.token) };
   });
 
@@ -70,20 +71,22 @@ export const getAdminPayouts = createServerFn({ method: "POST" })
   });
 
 export const reviewPartnerPayout = createServerFn({ method: "POST" })
-  .inputValidator((data: { adminToken: string; id: string; status: "paid" | "rejected"; note: string }) => {
+  .inputValidator((data: { adminToken: string; id: string; status: "paid" | "rejected"; note: string; transferReference?: string }) => {
     const { adminToken } = adminInput(data);
     if (!data?.id) throw new Error("Missing payout request.");
     if (data.status !== "paid" && data.status !== "rejected") throw new Error("Choose a valid payout action.");
     const note = data.note?.trim() ?? "";
     if (note.length > 500) throw new Error("Keep the review note under 500 characters.");
     if (data.status === "rejected" && !note) throw new Error("Enter a reason for rejecting this payout.");
-    return { adminToken, id: data.id, status: data.status, note };
+    const transferReference = data.transferReference?.trim() ?? "";
+    if (transferReference.length > 150 || (data.status === "paid" && !transferReference)) throw new Error("Enter a transfer reference of up to 150 characters.");
+    return { adminToken, id: data.id, status: data.status, note, transferReference };
   })
   .handler(async ({ data }) => {
     const { requireAdminSession } = await import("./admin-access.server");
     requireAdminSession(data.adminToken);
     const { getPayoutSql, readAdminPayouts, reviewPayoutRequest } = await import("./partner-payouts.server");
     const sql = await getPayoutSql();
-    await reviewPayoutRequest(sql, data.id, data.status, data.note);
+    await reviewPayoutRequest(sql, data.id, data.status, data.note, data.transferReference);
     return readAdminPayouts(sql);
   });

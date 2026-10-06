@@ -1,5 +1,5 @@
 import type { Sql } from "./db";
-import type { PayoutBalance, PayoutRequest } from "./payout-types";
+import { validatePayoutRecipient, type PayoutBalance, type PayoutRequest, type PayoutRecipient } from "./payout-types.ts";
 import { netPartnerEarnings } from "./partner-earnings.ts";
 
 let payoutSqlPromise: Promise<Sql> | null = null;
@@ -27,6 +27,11 @@ type PayoutRow = {
   created_at: Date | string;
   reviewed_at: Date | string | null;
   review_note: string;
+  receiving_method: PayoutRecipient["method"] | null;
+  receiving_provider: string | null;
+  receiving_name: string | null;
+  receiving_number: string | null;
+  transfer_reference: string;
 };
 
 function payoutFromRow(row: PayoutRow): PayoutRequest {
@@ -43,6 +48,10 @@ function payoutFromRow(row: PayoutRow): PayoutRequest {
     createdAt: new Date(row.created_at).toISOString(),
     reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
     reviewNote: row.review_note,
+    recipient: row.receiving_method && row.receiving_provider && row.receiving_name && row.receiving_number
+      ? { method: row.receiving_method, provider: row.receiving_provider, accountName: row.receiving_name, accountNumber: row.receiving_number }
+      : null,
+    transferReference: row.transfer_reference,
   };
 }
 
@@ -60,15 +69,18 @@ export async function readAdminPayouts(sql: Sql) {
   return rows.map(payoutFromRow);
 }
 
-export async function createPayoutRequest(sql: Sql, token: string, balance: PayoutBalance) {
+export async function createPayoutRequest(sql: Sql, token: string, balance: PayoutBalance, recipient: PayoutRecipient) {
+  const receiving = validatePayoutRecipient(recipient, balance.currency);
   const amount = netPartnerEarnings(balance.grossAmount, balance.commission);
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("No earnings are available for yesterday.");
   const timeZone = balance.currency === "NGN" ? "Africa/Lagos" : "Africa/Accra";
   const rows = await sql<{ id: string }>`
     insert into partner_payouts
-      (id, partner_id, partner_name, partner_email, earning_day, currency, gross_amount, commission, amount)
+      (id, partner_id, partner_name, partner_email, earning_day, currency, gross_amount, commission, amount,
+       receiving_method, receiving_provider, receiving_name, receiving_number)
     select ${crypto.randomUUID()}, id, name, email, ${balance.earningDay}::date,
-      ${balance.currency}, ${balance.grossAmount}, ${balance.commission}, ${amount}
+      ${balance.currency}, ${balance.grossAmount}, ${balance.commission}, ${amount},
+      ${receiving.method}, ${receiving.provider}, ${receiving.accountName}, ${receiving.accountNumber}
     from partners
     where token = ${token} and status = 'approved'
       and ${balance.earningDay}::date = (now() at time zone ${timeZone})::date - 1
@@ -84,12 +96,17 @@ export async function reviewPayoutRequest(
   id: string,
   status: "paid" | "rejected",
   note: string,
+  transferReference = "",
 ) {
   if (status === "rejected" && !note.trim()) throw new Error("Enter a reason for rejecting this payout.");
+  if (status === "paid" && (!transferReference.trim() || transferReference.trim().length > 150)) throw new Error("Enter a transfer reference of up to 150 characters.");
   const rows = await sql<{ id: string }>`
-    update partner_payouts set status = ${status}, review_note = ${note.trim()}, reviewed_at = now()
+    update partner_payouts set status = ${status}, review_note = ${note.trim()}, reviewed_at = now(),
+      transfer_reference = ${status === "paid" ? transferReference.trim() : ""}
     where id = ${id} and status = 'pending'
+      and (${status} <> 'paid' or (receiving_method is not null and receiving_provider is not null
+        and receiving_name is not null and receiving_number is not null))
     returning id
   `;
-  if (!rows[0]) throw new Error("This payout has already been reviewed or no longer exists.");
+  if (!rows[0]) throw new Error("This payout has already been reviewed, no longer exists, or is missing receiving details. Reject legacy requests and ask the partner to resubmit.");
 }

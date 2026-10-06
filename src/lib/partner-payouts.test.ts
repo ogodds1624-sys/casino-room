@@ -3,10 +3,29 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import type { Sql } from "./db";
-import type { PayoutBalance } from "./payout-types";
-import { createPayoutRequest, readAdminPayouts, readPartnerPayouts, reviewPayoutRequest } from "./partner-payouts.server.ts";
+import { validatePayoutRecipient, type PayoutBalance, type PayoutRecipient } from "./payout-types.ts";
+import { createPayoutRequest as insertPayoutRequest, readAdminPayouts, readPartnerPayouts, reviewPayoutRequest } from "./partner-payouts.server.ts";
 import { randomBytes } from "node:crypto";
 import { requireAdminSession, signInAdmin } from "./admin-access.server.ts";
+
+const receiving: PayoutRecipient = { method: "bank", provider: "Test Bank", accountName: "Partner A", accountNumber: "0012345678" };
+function createPayoutRequest(sql: Sql, token: string, balance: PayoutBalance) {
+  return insertPayoutRequest(sql, token, balance, receiving);
+}
+
+test("receiving details validate country-specific methods, numbers and required fields", () => {
+  assert.deepEqual(validatePayoutRecipient(receiving, "NGN"), receiving);
+  const momo: PayoutRecipient = { method: "mobile_money", provider: "MTN Mobile Money", accountName: "Test Partner", accountNumber: "0241234567" };
+  assert.deepEqual(validatePayoutRecipient(momo, "GHS"), momo);
+  assert.throws(() => validatePayoutRecipient(momo, "NGN"), /require a bank/);
+  assert.throws(() => validatePayoutRecipient(undefined, "GHS"), /receiving details/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, accountName: "" }, "GHS"), /holder/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, provider: "" }, "GHS"), /provider/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, accountNumber: "12345" }, "NGN"), /10-digit/);
+  assert.throws(() => validatePayoutRecipient({ ...receiving, accountNumber: "123x567890" }, "GHS"), /digits/);
+  assert.throws(() => validatePayoutRecipient({ ...momo, provider: "Unknown" }, "GHS"), /provider/);
+  assert.throws(() => validatePayoutRecipient({ ...momo, accountNumber: "241234567" }, "GHS"), /starting with 0/);
+});
 
 test("admin sessions require configuration, correct credentials and an unexpired signature", () => {
   const original = process.env.ADMIN_PASSCODE;
@@ -37,6 +56,7 @@ test("payout database workflow preserves snapshots and prevents duplicate paymen
   });
   try {
     await pg.exec(await readFile(new URL("../../migrations/0007_partner_payouts.sql", import.meta.url), "utf8"));
+    await pg.exec(await readFile(new URL("../../migrations/0008_payout_receiving_details.sql", import.meta.url), "utf8"));
     await pg.exec(`
       create table partners (id text primary key, name text, email text, token text, status text, commission integer);
       insert into partners values
@@ -71,6 +91,8 @@ test("payout database workflow preserves snapshots and prevents duplicate paymen
       assert.equal(requests[0].amount, 800);
       assert.equal(requests[0].grossAmount, 1000);
       assert.equal(requests[0].commission, 20);
+      assert.deepEqual(requests[0].recipient, receiving);
+      assert.equal(requests[0].recipient?.accountNumber, "0012345678");
     });
 
     await t.test("currencies and partners remain separate and unauthorized reads fail", async () => {
@@ -99,12 +121,13 @@ test("payout database workflow preserves snapshots and prevents duplicate paymen
       const rows = await readPartnerPayouts(sql, "token-a");
       assert.equal(rows.filter((row) => row.currency === "GHS").length, 2);
       assert.equal(rows.find((row) => row.id === request.id)?.reviewNote, "Please contact support.");
-      await assert.rejects(reviewPayoutRequest(sql, request.id, "paid", ""), /already been reviewed/);
+      await assert.rejects(reviewPayoutRequest(sql, request.id, "paid", "", "TEST-REF"), /already been reviewed/);
     });
 
     await t.test("paid requests block repeat claims and retain the submitted commission snapshot", async () => {
       const request = (await readPartnerPayouts(sql, "token-a")).find((row) => row.currency === "GHS" && row.status === "pending")!;
-      await reviewPayoutRequest(sql, request.id, "paid", "Transfer reference TEST-01");
+      await assert.rejects(reviewPayoutRequest(sql, request.id, "paid", ""), /transfer reference/);
+      await reviewPayoutRequest(sql, request.id, "paid", "Payment sent", "TEST-01");
       await sql`update partners set commission = 35 where id = 'a'`;
       await assert.rejects(createPayoutRequest(sql, "token-a", { ...gh, commission: 35 }), /already pending or paid/);
       const saved = (await readPartnerPayouts(sql, "token-a")).find((row) => row.id === request.id)!;
@@ -112,7 +135,26 @@ test("payout database workflow preserves snapshots and prevents duplicate paymen
       assert.equal(saved.amount, 800);
       assert.equal(saved.commission, 20);
       assert.ok(saved.reviewedAt);
+      assert.equal(saved.transferReference, "TEST-01");
+      assert.deepEqual(saved.recipient, receiving);
       await assert.rejects(reviewPayoutRequest(sql, request.id, "rejected", "Too late"), /already been reviewed/);
+    });
+    await t.test("resubmissions save new receiving details without changing rejected history", async () => {
+      const request = (await readPartnerPayouts(sql, "token-b"))[0];
+      await reviewPayoutRequest(sql, request.id, "rejected", "Update your bank details.");
+      const changed = { ...receiving, provider: "New Bank", accountNumber: "0098765432" };
+      await insertPayoutRequest(sql, "token-b", gh, changed);
+      const history = await readPartnerPayouts(sql, "token-b");
+      assert.deepEqual(history.find((row) => row.id === request.id)?.recipient, receiving);
+      assert.deepEqual(history.find((row) => row.status === "pending")?.recipient, changed);
+    });
+    await t.test("legacy requests remain readable but cannot be marked paid without receiving details", async () => {
+      await sql`insert into partner_payouts (id, partner_id, partner_name, partner_email, earning_day, currency, gross_amount, commission, amount)
+        values ('legacy', 'legacy-partner', 'Legacy', 'legacy@example.test', ${dates[0].gh}::date, 'GHS', 1000, 20, 800)`;
+      const legacy = (await readAdminPayouts(sql)).find((row) => row.id === "legacy");
+      assert.equal(legacy?.recipient, null);
+      await assert.rejects(reviewPayoutRequest(sql, "legacy", "paid", "", "REF"), /missing receiving details/);
+      await reviewPayoutRequest(sql, "legacy", "rejected", "Resubmit with receiving details.");
     });
   } finally {
     await pg.close();
