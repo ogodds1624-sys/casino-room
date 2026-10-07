@@ -909,7 +909,8 @@ export const confirmPayment = createServerFn({ method: "POST" })
     const { getSql } = await import("@/lib/db");
     const sql = await getSql();
     await ensurePayments(sql);
-    await sql`update payments set status = 'confirmed', confirmed_at = now() where id = ${data.id} and status = 'pending'`;
+    const { confirmPaymentExcludingTesters } = await import("./payment-submission.server");
+    await confirmPaymentExcludingTesters(sql, data.id);
     const linked = await sql<{ user_id: string | null; referred_by: string | null }>`
       select user_id, referred_by from payments where id = ${data.id}
     `;

@@ -20,3 +20,27 @@ export async function insertPaymentOnce(
   if (!rows[0]) throw new Error("Could not record your payment. Please try again.");
   return { ok: true, id: rows[0].id };
 }
+
+export async function confirmPaymentExcludingTesters(sql: Sql, paymentId: string) {
+  const rows = await sql.query<{ id: string }>(
+    `update payments p
+     set status = 'confirmed',
+       confirmed_at = now(),
+       counts_revenue = not exists (
+         select 1
+         from tester_accounts t
+         where exists (
+           select 1 from "user" u
+           where u.id = p.user_id and lower(u.email) = t.email
+         )
+         or exists (
+           select 1 from registered_users r
+           where r.user_id = p.user_id and lower(r.email) = t.email
+         )
+       )
+     where p.id = $1 and p.status = 'pending'
+     returning p.id`,
+    [paymentId],
+  );
+  return rows.length > 0;
+}
