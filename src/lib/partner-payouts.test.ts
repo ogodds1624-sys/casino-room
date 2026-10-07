@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import type { Sql } from "./db";
 import { validatePayoutRecipient, type PayoutBalance, type PayoutRecipient } from "./payout-types.ts";
-import { createPayoutRequest as insertPayoutRequest, readAdminPayouts, readPartnerPayouts, reviewPayoutRequest } from "./partner-payouts.server.ts";
+import { createPayoutRequest as insertPayoutRequest, markPartnerYesterdayPaid, readAdminPayouts, readPartnerPayouts, reviewPayoutRequest } from "./partner-payouts.server.ts";
 import { randomBytes } from "node:crypto";
 import { requireAdminSession, signInAdmin } from "./admin-access.server.ts";
 
@@ -47,6 +47,82 @@ test("admin sessions require configuration, correct credentials and an unexpired
   } finally {
     if (original === undefined) delete process.env.ADMIN_PASSCODE;
     else process.env.ADMIN_PASSCODE = original;
+  }
+});
+
+test("admin marks yesterday's Ghana and Nigeria earnings paid once", async () => {
+  const pg = new PGlite({ parsers: { 1082: (value: string) => value } });
+  try {
+    await pg.exec(await readFile(new URL("../../migrations/0007_partner_payouts.sql", import.meta.url), "utf8"));
+    await pg.exec(await readFile(new URL("../../migrations/0008_payout_receiving_details.sql", import.meta.url), "utf8"));
+    await pg.exec(`
+      create table partners (
+        id text primary key, name text not null, email text not null, code text not null,
+        token text, status text not null, commission integer not null
+      );
+      insert into partners values ('a', 'Partner A', 'a@example.test', 'ALPHA', 'token-a', 'approved', 20);
+      create table payments (
+        id text primary key, amount integer not null, status text not null, user_id text,
+        referred_by text, counts_revenue boolean, confirmed_at timestamptz, created_at timestamptz not null default now()
+      );
+      create table referrals (user_id text primary key, referred_by text not null);
+      create table player_country (user_id text primary key, country text not null);
+      insert into referrals values ('gh-user', 'ALPHA'), ('ng-user', 'ALPHA');
+      insert into player_country values ('gh-user', 'Ghana'), ('ng-user', 'Nigeria');
+      insert into payments (id, amount, status, user_id, counts_revenue, confirmed_at) values
+        ('gh-yesterday', 1000, 'confirmed', 'gh-user', true,
+          (((now() at time zone 'Africa/Accra')::date - 1 + time '12:00') at time zone 'Africa/Accra')),
+        ('ng-yesterday', 41986, 'confirmed', 'ng-user', true,
+          (((now() at time zone 'Africa/Lagos')::date - 1 + time '12:00') at time zone 'Africa/Lagos')),
+        ('gh-today', 350, 'confirmed', 'gh-user', true,
+          (((now() at time zone 'Africa/Accra')::date + time '12:00') at time zone 'Africa/Accra')),
+        ('gh-reversed', 400, 'confirmed', 'gh-user', false,
+          (((now() at time zone 'Africa/Accra')::date - 1 + time '13:00') at time zone 'Africa/Accra'));
+      insert into partner_payouts (
+        id, partner_id, partner_name, partner_email, earning_day, currency, gross_amount,
+        commission, amount, status, receiving_method, receiving_provider, receiving_name, receiving_number
+      ) values (
+        'pending-ng', 'a', 'Partner A', 'a@example.test',
+        (now() at time zone 'Africa/Lagos')::date - 1, 'NGN', 1000, 20, 800, 'pending',
+        'bank', 'Test Bank', 'Partner A', '0012345678'
+      );
+    `);
+    const run = async <T>(text: string, values: unknown[] = []) => (await pg.query<T>(text, values)).rows;
+    const sql: Sql = Object.assign(
+      async <T>(strings: TemplateStringsArray, ...values: unknown[]) => {
+        let text = strings[0];
+        for (let index = 0; index < values.length; index++) text += `$${index + 1}${strings[index + 1]}`;
+        return run<T>(text, values);
+      },
+      { query: run },
+    );
+
+    await markPartnerYesterdayPaid(sql, "a");
+    const payouts = await readAdminPayouts(sql);
+    assert.equal(payouts.length, 2);
+    assert.deepEqual(
+      payouts
+        .map(({ currency, grossAmount, amount, status }) => ({ currency, grossAmount, amount, status }))
+        .sort((left, right) => left.currency.localeCompare(right.currency)),
+      [
+        { currency: "GHS", grossAmount: 1000, amount: 800, status: "paid" },
+        { currency: "NGN", grossAmount: 41986, amount: 33588.8, status: "paid" },
+      ],
+    );
+    const settledNg = payouts.find((payout) => payout.currency === "NGN");
+    assert.equal(settledNg?.id, "pending-ng");
+    assert.deepEqual(settledNg?.recipient, {
+      method: "bank",
+      provider: "Test Bank",
+      accountName: "Partner A",
+      accountNumber: "0012345678",
+    });
+
+    await markPartnerYesterdayPaid(sql, "a");
+    assert.equal((await readAdminPayouts(sql)).length, 2);
+    await assert.rejects(markPartnerYesterdayPaid(sql, "missing"), /Partner not found/);
+  } finally {
+    await pg.close();
   }
 });
 

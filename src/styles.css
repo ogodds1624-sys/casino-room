@@ -130,7 +130,7 @@
     row-gap: 0;
   }
   .desk-shell .partner-row.desk-row {
-    grid-template-columns: minmax(8rem, 1.15fr) 8rem 7rem minmax(11rem, 1.3fr) 10.5rem 9.25rem 8rem 8rem;
+    grid-template-columns: minmax(8rem, 1.15fr) 8rem 7rem minmax(11rem, 1.3fr) 10.5rem 9.25rem 8rem 9rem 12rem 14rem 8rem;
     row-gap: 0;
   }
   .desk-shell .week-row.desk-row {

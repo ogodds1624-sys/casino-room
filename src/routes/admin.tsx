@@ -33,8 +33,9 @@ import {
 } from "@/lib/admin-snapshot";
 import { bumpGateway } from "@/lib/storefront-live";
 import { isNairaAmount } from "@/lib/desk-session";
+import { netPartnerEarnings } from "@/lib/partner-earnings";
 import { AdminPayoutDesk } from "@/components/payout-desk";
-import { adminSignIn, checkAdminSession } from "@/lib/partner-payouts";
+import { adminSignIn, checkAdminSession, markPartnerYesterdayPaid } from "@/lib/partner-payouts";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -518,7 +519,7 @@ function AdminPage() {
               <MemberList members={view.members} />
             </div>
           ) : tab === "partners" ? (
-            <PartnerDesk partners={view.partners} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} />
+            <PartnerDesk adminToken={adminToken} partners={view.partners} busy={spinning} onChange={setSnapshot} onBusy={setSpinning} onPayoutSettled={() => setPayoutRefresh((value) => value + 1)} />
           ) : tab === "payouts" ? (
             <AdminPayoutDesk adminToken={adminToken} refreshVersion={payoutRefresh} />
           ) : tab === "block" ? (
@@ -841,15 +842,19 @@ function GhanaBankFields({ account, onChange }: { account: BankAccount; onChange
 }
 
 function PartnerDesk({
+  adminToken,
   partners,
   busy,
   onChange,
   onBusy,
+  onPayoutSettled,
 }: {
+  adminToken: string;
   partners: AdminSnapshot["partners"];
   busy: boolean;
   onChange: (snapshot: AdminSnapshot) => void;
   onBusy: (busy: boolean) => void;
+  onPayoutSettled: () => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -938,7 +943,7 @@ function PartnerDesk({
           <p className="mt-1 text-sm text-[#8b95a7]">Members who open /?ref=CODE are credited to this partner in Ghana and Nigeria.</p>
         </div>
         <div className="overflow-x-auto">
-          <div className="min-w-[68rem]">
+          <div className="min-w-[106rem]">
         <div className={partnerCols + " desk-head text-[11px] tracking-[0.12em]"}>
           <span>PARTNER</span>
           <span>STATUS</span>
@@ -947,6 +952,8 @@ function PartnerDesk({
           <span className="pl-3 whitespace-nowrap">COMMISSION</span>
           <span className="pl-4 whitespace-nowrap">REVENUE (GHS)</span>
           <span className="pl-3 whitespace-nowrap">REVENUE (N)</span>
+          <span className="whitespace-nowrap">YESTERDAY TOTAL</span>
+          <span className="whitespace-nowrap">AVAILABLE FOR PAYOUT</span>
           <span>ACTIONS</span>
         </div>
         {partners.length === 0 ? (
@@ -991,7 +998,33 @@ function PartnerDesk({
                 </div>
                 <span className="pl-4 whitespace-nowrap text-xs font-bold">GHS {partner.revenue.toLocaleString("en-GH")}</span>
                 <span className="pl-3 whitespace-nowrap text-xs font-bold">₦{partner.nigeriaRevenue.toLocaleString("en-NG")}</span>
-                <div>
+                <div className="whitespace-nowrap text-xs font-bold">
+                  <p>GHS {partner.yesterdayGhsRevenue.toLocaleString("en-GH")}</p>
+                  <p className="mt-1">₦{partner.yesterdayNigeriaRevenue.toLocaleString("en-NG")}</p>
+                </div>
+                <div className="whitespace-nowrap text-xs font-bold">
+                  <p>GHS {partner.availableGhsPayout.toLocaleString("en-GH")}</p>
+                  <p className="mt-1">₦{partner.availableNigeriaPayout.toLocaleString("en-NG")}</p>
+                </div>
+                <div className="flex flex-col items-start gap-2">
+                  <button
+                    type="button"
+                    disabled={busy || partner.yesterdayPayoutStatus === "none" || partner.yesterdayPayoutStatus === "paid"}
+                    title="Record yesterday's Ghana and Nigeria earnings as paid"
+                    onClick={() => {
+                      const ghanaPayout = netPartnerEarnings(partner.yesterdayGhsRevenue, partner.commission);
+                      const nigeriaPayout = netPartnerEarnings(partner.yesterdayNigeriaRevenue, partner.commission);
+                      if (!window.confirm(`Mark yesterday's payout for ${partner.name} as paid? GHS ${ghanaPayout.toLocaleString("en-GH")} · NGN ${nigeriaPayout.toLocaleString("en-NG")}`)) return;
+                      void run(async () => {
+                        await markPartnerYesterdayPaid({ data: { adminToken, partnerId: partner.id } });
+                        onPayoutSettled();
+                        return getAdminSnapshot();
+                      });
+                    }}
+                    className={"h-7 rounded-lg px-2 text-[10px] font-extrabold text-white disabled:opacity-60 " + (partner.yesterdayPayoutStatus === "paid" ? "bg-emerald-700" : "bg-red")}
+                  >
+                    {partner.yesterdayPayoutStatus === "paid" ? "PAID" : partner.yesterdayPayoutStatus === "none" ? "NO DUE" : "MARK PAID"}
+                  </button>
                   <button type="button" disabled={busy} onClick={() => void run(() => deletePartner({ data: { id: partner.id } }))} className="h-7 rounded-lg border border-red/80 px-2 text-[10px] font-extrabold text-red disabled:opacity-60">
                     DELETE
                   </button>
@@ -1059,7 +1092,7 @@ function CommissionRate({ value, disabled, onSave }: { value: number; disabled: 
 }
 
 const partnerCols =
-  "partner-row desk-row grid-cols-[minmax(8rem,1.15fr)_8rem_7rem_minmax(11rem,1.3fr)_10.5rem_9.25rem_8rem_8rem]";
+  "partner-row desk-row grid-cols-[minmax(8rem,1.15fr)_8rem_7rem_minmax(11rem,1.3fr)_10.5rem_9.25rem_8rem_9rem_12rem_14rem_8rem]";
 
 function TransactionHistory({
   payments,

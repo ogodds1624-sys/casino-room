@@ -38,6 +38,11 @@ export type AdminPartner = {
   referrals: number;
   revenue: number;
   nigeriaRevenue: number;
+  yesterdayGhsRevenue: number;
+  yesterdayNigeriaRevenue: number;
+  availableGhsPayout: number;
+  availableNigeriaPayout: number;
+  yesterdayPayoutStatus: "available" | "pending" | "paid" | "none";
 };
 
 export const GHANA_MOMO_NETWORKS = [
@@ -486,6 +491,14 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
     status: string;
     commission: number | string;
   }>`select id, name, email, code, status, commission from partners order by created_at desc`;
+  const { getPayoutSql, readYesterdayPartnerEarnings } = await import("./partner-payouts.server");
+  const yesterdayEarnings = await readYesterdayPartnerEarnings(await getPayoutSql());
+  const yesterdayByPartner = new Map<string, typeof yesterdayEarnings>();
+  for (const earning of yesterdayEarnings) {
+    const partnerEarnings = yesterdayByPartner.get(earning.partnerId) ?? [];
+    partnerEarnings.push(earning);
+    yesterdayByPartner.set(earning.partnerId, partnerEarnings);
+  }
   const referralCounts = await sql<{ referred_by: string; total: number | string }>`
     select lower(referred_by) as referred_by, count(*) as total from referrals group by lower(referred_by)
   `;
@@ -526,6 +539,18 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
     const code = row.code.toLowerCase();
     const name = row.name.toLowerCase();
     const extra = (map: Map<string, number>) => (map.get(code) ?? 0) + (code === name ? 0 : (map.get(name) ?? 0));
+    const daily = yesterdayByPartner.get(row.id) ?? [];
+    const forCurrency = (currency: "GHS" | "NGN") => daily.find((earning) => earning.currency === currency);
+    const ghana = forCurrency("GHS");
+    const nigeria = forCurrency("NGN");
+    const payable = daily.filter((earning) => netPartnerEarnings(earning.grossAmount, earning.commission) > 0);
+    const yesterdayPayoutStatus = payable.length === 0
+      ? "none"
+      : payable.every((earning) => earning.payoutStatus === "paid")
+        ? "paid"
+        : payable.some((earning) => earning.payoutStatus === "pending")
+          ? "pending"
+          : "available";
     return {
       id: row.id,
       name: row.name,
@@ -536,6 +561,17 @@ async function readSnapshot(sql: Sql): Promise<AdminSnapshot> {
       referrals: extra(countBy),
       revenue: extra(ghsBy),
       nigeriaRevenue: extra(ngnBy),
+      yesterdayGhsRevenue: ghana?.grossAmount ?? 0,
+      yesterdayNigeriaRevenue: nigeria?.grossAmount ?? 0,
+      availableGhsPayout:
+        ghana?.payoutStatus == null && ghana
+          ? netPartnerEarnings(ghana.grossAmount, ghana.commission)
+          : 0,
+      availableNigeriaPayout:
+        nigeria?.payoutStatus == null && nigeria
+          ? netPartnerEarnings(nigeria.grossAmount, nigeria.commission)
+          : 0,
+      yesterdayPayoutStatus,
     };
   });
   const gatewayRows = await sql<{

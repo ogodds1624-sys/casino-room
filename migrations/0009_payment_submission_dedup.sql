@@ -1,3 +1,6 @@
+alter table payments add column if not exists user_id text;
+alter table payments add column if not exists referred_by text;
+alter table payments add column if not exists receipt text;
 alter table payments add column if not exists submission_fingerprint text;
 create unique index if not exists payments_submission_once
   on payments (coalesce(user_id, ''), submission_fingerprint)

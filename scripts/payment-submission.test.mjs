@@ -8,8 +8,7 @@ import { build } from "esbuild";
 test("identical concurrent payment submissions and retries record exactly one payment", async () => {
   const pg = new PGlite();
   try {
-    await pg.exec(`create table payments (id text primary key, payer_name text, amount integer,
-      status text, user_id text, referred_by text, receipt text)`);
+    await pg.exec(await readFile(new URL("../migrations/0002_payments.sql", import.meta.url), "utf8"));
     await pg.exec(await readFile(new URL("../migrations/0009_payment_submission_dedup.sql", import.meta.url), "utf8"));
     const { outputFiles } = await build({ entryPoints: ["src/lib/payment-submission.server.ts"], bundle: true, write: false, platform: "node", format: "cjs" });
     const require = createRequire(import.meta.url);

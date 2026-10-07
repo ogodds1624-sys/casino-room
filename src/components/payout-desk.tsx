@@ -62,7 +62,7 @@ function PayoutHistory({ rows, admin = false, children }: {
               <div><dt className="text-[#9aa3b2]">Account holder</dt><dd className="break-words">{row.recipient.accountName}</dd></div>
               <div><dt className="text-[#9aa3b2]">Account / wallet number</dt><dd className="break-all font-bold">{row.recipient.accountNumber}</dd></div>
             </dl>
-          ) : <p className="mt-3 text-sm text-red">Legacy request: receiving details were not supplied.</p>}
+          ) : row.status === "pending" ? <p className="mt-3 text-sm text-red">Legacy request: receiving details were not supplied.</p> : null}
           {row.transferReference ? <p className="mt-3 break-all text-sm font-bold">Transfer reference: {row.transferReference}</p> : null}
           {row.reviewNote ? <p className="mt-3 break-words text-sm text-white">Admin note: {row.reviewNote}</p> : null}
           {children?.(row)}

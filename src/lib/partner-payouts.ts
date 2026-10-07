@@ -70,6 +70,21 @@ export const getAdminPayouts = createServerFn({ method: "POST" })
     return readAdminPayouts(await getPayoutSql());
   });
 
+export const markPartnerYesterdayPaid = createServerFn({ method: "POST" })
+  .inputValidator((data: { adminToken: string; partnerId: string }) => {
+    const { adminToken } = adminInput(data);
+    const partnerId = data?.partnerId?.trim() ?? "";
+    if (!partnerId) throw new Error("Choose a partner.");
+    return { adminToken, partnerId };
+  })
+  .handler(async ({ data }) => {
+    const { requireAdminSession } = await import("./admin-access.server");
+    requireAdminSession(data.adminToken);
+    const { getPayoutSql, markPartnerYesterdayPaid: settleYesterday } = await import("./partner-payouts.server");
+    await settleYesterday(await getPayoutSql(), data.partnerId);
+    return { ok: true };
+  });
+
 export const reviewPartnerPayout = createServerFn({ method: "POST" })
   .inputValidator((data: { adminToken: string; id: string; status: "paid" | "rejected"; note: string; transferReference?: string }) => {
     const { adminToken } = adminInput(data);
